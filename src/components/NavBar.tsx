@@ -39,9 +39,11 @@ const NavBar = () => {
             <Link to="/learn" className="px-3 py-2 text-gray-700 hover:text-primary transition-colors">
               Learn
             </Link>
-            <Button className="ml-4" variant="default">
-              Sign In
-            </Button>
+            <Link to="/login">
+              <Button className="ml-4" variant="default">
+                Sign In
+              </Button>
+            </Link>
           </div>
           
           {/* Mobile menu button */}
@@ -100,7 +102,9 @@ const NavBar = () => {
               Learn
             </Link>
             <div className="pt-2">
-              <Button className="w-full">Sign In</Button>
+              <Link to="/login">
+                <Button className="w-full">Sign In</Button>
+              </Link>
             </div>
           </div>
         </div>
