@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from './supabase';
+import { supabase, checkSupabaseConnection } from './supabase';
+import { toast } from '@/hooks/use-toast';
 
 interface SupabaseContextType {
   isSupabaseConfigured: boolean;
@@ -18,21 +19,31 @@ interface SupabaseProviderProps {
 
 export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Check if Supabase is configured properly by making a simple test query
-    const checkSupabaseConfig = async () => {
+    const checkSupabase = async () => {
       try {
-        // Simple test query to see if Supabase is working
-        await supabase.from('profiles').select('count', { count: 'exact', head: true });
-        setIsSupabaseConfigured(true);
+        setChecking(true);
+        const isConnected = await checkSupabaseConnection();
+        setIsSupabaseConfigured(isConnected);
+        
+        if (!isConnected) {
+          toast({
+            title: "Supabase Connection Failed",
+            description: "Please check your Supabase URL and API key in the environment variables.",
+            variant: "destructive"
+          });
+        }
       } catch (error) {
-        console.error('Supabase configuration error:', error);
+        console.error('Error checking Supabase:', error);
         setIsSupabaseConfigured(false);
+      } finally {
+        setChecking(false);
       }
     };
 
-    checkSupabaseConfig();
+    checkSupabase();
   }, []);
 
   return (

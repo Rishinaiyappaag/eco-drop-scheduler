@@ -16,6 +16,8 @@ import Partners from "./pages/Partners";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import NavBar from "./components/NavBar";
+import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -25,24 +27,31 @@ const AppRoutes = () => {
 
   if (!isSupabaseConfigured) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-        <div className="max-w-md p-6 bg-white rounded-lg shadow-lg">
-          <h1 className="mb-4 text-2xl font-bold text-red-600">Supabase Configuration Required</h1>
-          <p className="mb-4 text-gray-700">
-            Please add your Supabase credentials to continue:
-          </p>
-          <ul className="mb-6 text-left text-sm">
-            <li className="mb-2">
-              <span className="font-semibold">VITE_SUPABASE_URL</span>: Your Supabase project URL
-            </li>
-            <li className="mb-2">
-              <span className="font-semibold">VITE_SUPABASE_ANON_KEY</span>: Your public anon key
-            </li>
-          </ul>
-          <p className="text-sm text-gray-600">
-            Set these in your .env file or directly in the Lovable environment settings.
-          </p>
+      <div className="min-h-screen flex flex-col">
+        <NavBar />
+        <div className="flex-grow flex items-center justify-center p-4">
+          <div className="max-w-md p-6 bg-white rounded-lg shadow-lg">
+            <h1 className="mb-4 text-2xl font-bold text-red-600">Supabase Configuration Required</h1>
+            <p className="mb-4 text-gray-700">
+              Authentication is not working because your Supabase credentials are missing or invalid.
+            </p>
+            <h2 className="text-lg font-semibold mb-2">To fix this issue:</h2>
+            <ol className="list-decimal pl-5 mb-6 space-y-2">
+              <li>Create a Supabase project at <a href="https://supabase.com" className="text-primary underline">supabase.com</a></li>
+              <li>Get your project URL from the API settings</li>
+              <li>Get your public anon key from the API settings</li>
+              <li>Set these values as environment variables in your project</li>
+            </ol>
+            <div className="bg-gray-100 p-3 rounded-md mb-6">
+              <p className="font-mono text-sm mb-1">VITE_SUPABASE_URL=https://your-project-id.supabase.co</p>
+              <p className="font-mono text-sm">VITE_SUPABASE_ANON_KEY=your-anon-key</p>
+            </div>
+            <p className="text-sm text-gray-600">
+              You can continue using the app's non-authentication features, but login and registration will not work until this is fixed.
+            </p>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
