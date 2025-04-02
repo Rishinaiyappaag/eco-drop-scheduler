@@ -28,10 +28,13 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
         const isConnected = await checkSupabaseConnection();
         setIsSupabaseConfigured(isConnected);
         
-        if (!isConnected) {
+        if (isConnected) {
+          console.log('Supabase connection successful');
+        } else {
+          console.error('Supabase connection failed - API query test unsuccessful');
           toast({
             title: "Supabase Connection Failed",
-            description: "Please check your Supabase URL and API key in the environment variables.",
+            description: "Could not connect to Supabase database. Please check your configuration.",
             variant: "destructive"
           });
         }

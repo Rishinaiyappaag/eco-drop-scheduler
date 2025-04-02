@@ -2,9 +2,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { toast } from '@/hooks/use-toast'
 
-// Use environment variables or fallback for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Use environment variables with fallback to hardcoded values for development
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://fgmboyzcapekhvpvsdlm.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZnbWJveXpjYXBla2h2cHZzZGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MTI5MzAsImV4cCI6MjA1OTE4ODkzMH0.j0_IBTtVpvKYQ0kSZr_YbPYnbIxphaN_n2sYFiYXaoM'
 
 // Check if the URL is an actual URL and not just a placeholder
 const isValidUrl = (url: string) => {
@@ -22,8 +22,8 @@ if (!supabaseUrl || !isValidUrl(supabaseUrl) || !supabaseAnonKey || supabaseAnon
 
 // Create a Supabase client
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder-url.supabase.co', 
-  supabaseAnonKey || 'placeholder-key',
+  supabaseUrl, 
+  supabaseAnonKey,
   {
     auth: {
       persistSession: true,
