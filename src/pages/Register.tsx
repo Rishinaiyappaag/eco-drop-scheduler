@@ -6,9 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { signUp } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 const Register = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -18,6 +25,69 @@ const Register = () => {
     agreeTerms: false
   });
 
+  const [errors, setErrors] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    terms: ""
+  });
+
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      terms: ""
+    };
+
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = "First name is required";
+      isValid = false;
+    }
+
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = "Last name is required";
+      isValid = false;
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Email address is invalid";
+      isValid = false;
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters long";
+      isValid = false;
+    } else if (!/(?=.*\d)(?=.*[!@#$%^&*])/.test(formData.password)) {
+      newErrors.password = "Password must contain a number and special character";
+      isValid = false;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+      isValid = false;
+    }
+
+    if (!formData.agreeTerms) {
+      newErrors.terms = "You must agree to the terms and conditions";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -26,10 +96,35 @@ const Register = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle registration logic here
-    console.log("Registration data:", formData);
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await signUp({
+        email: formData.email,
+        password: formData.password,
+        first_name: formData.firstName,
+        last_name: formData.lastName
+      });
+      
+      if (result.success) {
+        toast({
+          title: "Registration successful!",
+          description: "Welcome to EcoDrop! Please check your email to verify your account.",
+        });
+        navigate('/');
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,8 +151,11 @@ const Register = () => {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    required
+                    className={errors.firstName ? "border-red-500" : ""}
                   />
+                  {errors.firstName && (
+                    <p className="text-xs text-red-500">{errors.firstName}</p>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -67,8 +165,11 @@ const Register = () => {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    required
+                    className={errors.lastName ? "border-red-500" : ""}
                   />
+                  {errors.lastName && (
+                    <p className="text-xs text-red-500">{errors.lastName}</p>
+                  )}
                 </div>
               </div>
               
@@ -80,8 +181,11 @@ const Register = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
+                  className={errors.email ? "border-red-500" : ""}
                 />
+                {errors.email && (
+                  <p className="text-xs text-red-500">{errors.email}</p>
+                )}
               </div>
               
               <div className="mt-4 space-y-2">
@@ -92,11 +196,15 @@ const Register = () => {
                   type="password"
                   value={formData.password}
                   onChange={handleChange}
-                  required
+                  className={errors.password ? "border-red-500" : ""}
                 />
-                <p className="text-xs text-gray-500">
-                  Password must be at least 8 characters with a number and special character
-                </p>
+                {errors.password ? (
+                  <p className="text-xs text-red-500">{errors.password}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Password must be at least 8 characters with a number and special character
+                  </p>
+                )}
               </div>
               
               <div className="mt-4 space-y-2">
@@ -107,11 +215,14 @@ const Register = () => {
                   type="password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  required
+                  className={errors.confirmPassword ? "border-red-500" : ""}
                 />
+                {errors.confirmPassword && (
+                  <p className="text-xs text-red-500">{errors.confirmPassword}</p>
+                )}
               </div>
               
-              <div className="mt-6 flex items-center space-x-2">
+              <div className="mt-6 flex items-start space-x-2">
                 <Checkbox 
                   id="agreeTerms" 
                   name="agreeTerms"
@@ -122,14 +233,31 @@ const Register = () => {
                       agreeTerms: checked as boolean
                     }));
                   }}
+                  className={errors.terms ? "border-red-500" : ""}
                 />
-                <Label htmlFor="agreeTerms" className="text-sm text-gray-600">
-                  I agree to the <Link to="/terms" className="text-primary hover:underline">Terms & Conditions</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-                </Label>
+                <div>
+                  <Label htmlFor="agreeTerms" className="text-sm text-gray-600">
+                    I agree to the <Link to="/terms" className="text-primary hover:underline">Terms & Conditions</Link> and <Link to="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                  </Label>
+                  {errors.terms && (
+                    <p className="text-xs text-red-500">{errors.terms}</p>
+                  )}
+                </div>
               </div>
               
-              <Button type="submit" className="w-full mt-6">
-                Create Account
+              <Button 
+                type="submit" 
+                className="w-full mt-6"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                    Creating Account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </Button>
             </form>
             
