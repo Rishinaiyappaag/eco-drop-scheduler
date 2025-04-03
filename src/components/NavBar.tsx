@@ -31,6 +31,9 @@ const NavBar = () => {
     toggleMenu();
   };
 
+  // For debugging
+  console.log("Current authentication state:", { isLoggedIn: !!user, userId: user?.id });
+
   return (
     <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

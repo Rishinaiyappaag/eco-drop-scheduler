@@ -38,8 +38,8 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
           console.log('Supabase connection successful');
           // Get current user
           const { data: { user } } = await supabase.auth.getUser();
+          console.log('Current user from auth.getUser():', user);
           setUser(user);
-          console.log('Current user:', user);
         } else {
           console.error('Supabase connection failed - API query test unsuccessful');
           toast({

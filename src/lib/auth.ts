@@ -16,7 +16,7 @@ export const signUp = async ({
   last_name
 }: SignUpCredentials) => {
   try {
-    // Create the user in Supabase Auth
+    // Create the user in Supabase Auth with email/password only (no magic links)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -24,7 +24,8 @@ export const signUp = async ({
         data: {
           first_name,
           last_name
-        }
+        },
+        emailRedirectTo: window.location.origin // Redirect back to the app after email verification
       }
     })
 
@@ -76,6 +77,7 @@ export const signUp = async ({
 
 export const signIn = async (email: string, password: string) => {
   try {
+    // Explicitly use signInWithPassword to avoid magic links
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password

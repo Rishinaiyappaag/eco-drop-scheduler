@@ -65,7 +65,9 @@ const Login = () => {
     setIsLoading(true);
     
     try {
+      console.log("Attempting to sign in with:", { email: formData.email, password: "***" });
       const result = await signIn(formData.email, formData.password);
+      console.log("Sign in result:", result);
       
       if (result.success) {
         toast({
