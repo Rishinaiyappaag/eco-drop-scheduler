@@ -1,23 +1,55 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MapPin, Search } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import { toast } from "@/hooks/use-toast";
 
-// This is a placeholder for the map functionality
-// In a real implementation, you would integrate with Google Maps or another mapping API
+// Fix marker icon issues in Leaflet with webpack
+const defaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+// Sample drop-off locations for demonstration
+const sampleLocations = [
+  { id: 1, name: "EcoTech Recycling Center", address: "123 Green St", lat: 40.7128, lng: -74.006, phone: "555-123-4567" },
+  { id: 2, name: "City E-Waste Depot", address: "456 Tech Ave", lat: 40.7282, lng: -73.994, phone: "555-234-5678" },
+  { id: 3, name: "GreenDrop Collection Point", address: "789 Recycle Rd", lat: 40.7023, lng: -74.013, phone: "555-345-6789" },
+];
+
 const MapSection = () => {
   const [zipCode, setZipCode] = useState("");
-
+  const [locations, setLocations] = useState(sampleLocations);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([40.7128, -74.006]); // NYC default
+  const [mapZoom, setMapZoom] = useState(12);
+  
+  // In a real application, this would call an API to search for locations
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Searching for e-waste drop-off locations near:", zipCode);
-    // In a real implementation, this would trigger an API call to find locations
+    // For demo purposes, we'll just pretend we fetched new locations
+    toast({
+      title: "Locations Updated",
+      description: `Found ${locations.length} drop-off locations near ${zipCode}`,
+    });
   };
 
+  useEffect(() => {
+    // Set default Leaflet icon for all markers
+    L.Marker.prototype.options.icon = defaultIcon;
+  }, []);
+
   return (
-    <section className="py-16">
+    <section className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
             Find Drop-off Locations
           </h2>
@@ -49,29 +81,37 @@ const MapSection = () => {
           </div>
           
           <div className="h-96 bg-gray-200 relative">
-            {/* This div would be replaced with an actual map component */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="h-12 w-12 text-primary mx-auto" />
-                <p className="mt-2 text-gray-600">
-                  Interactive map would be displayed here.
-                </p>
-                <p className="text-sm text-gray-500">
-                  (Using Google Maps or similar API integration)
-                </p>
-              </div>
-            </div>
-            
-            {/* Sample markers that would appear on the map */}
-            <div className="absolute top-1/4 left-1/4 bg-primary text-white rounded-full p-2">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <div className="absolute top-1/3 right-1/3 bg-primary text-white rounded-full p-2">
-              <MapPin className="h-4 w-4" />
-            </div>
-            <div className="absolute bottom-1/4 right-1/4 bg-primary text-white rounded-full p-2">
-              <MapPin className="h-4 w-4" />
-            </div>
+            <MapContainer 
+              center={mapCenter} 
+              zoom={mapZoom} 
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {locations.map((location) => (
+                <Marker 
+                  key={location.id}
+                  position={[location.lat, location.lng]}
+                  icon={defaultIcon}
+                >
+                  <Popup>
+                    <div>
+                      <h3 className="font-medium text-lg">{location.name}</h3>
+                      <p className="text-sm text-gray-600">{location.address}</p>
+                      <p className="text-sm text-gray-600">{location.phone}</p>
+                      <button 
+                        className="mt-2 text-sm text-primary hover:underline"
+                        onClick={() => window.open(`https://maps.google.com/?q=${location.lat},${location.lng}`, '_blank')}
+                      >
+                        Get Directions
+                      </button>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
           </div>
           
           <div className="p-6 border-t">

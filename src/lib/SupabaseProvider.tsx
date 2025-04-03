@@ -2,13 +2,18 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection } from './supabase';
 import { toast } from '@/hooks/use-toast';
+import { User } from '@supabase/supabase-js';
 
 interface SupabaseContextType {
   isSupabaseConfigured: boolean;
+  user: User | null;
+  isLoading: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType>({
-  isSupabaseConfigured: false
+  isSupabaseConfigured: false,
+  user: null,
+  isLoading: true
 });
 
 export const useSupabase = () => useContext(SupabaseContext);
@@ -19,17 +24,21 @@ interface SupabaseProviderProps {
 
 export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkSupabase = async () => {
       try {
-        setChecking(true);
+        setIsLoading(true);
         const isConnected = await checkSupabaseConnection();
         setIsSupabaseConfigured(isConnected);
         
         if (isConnected) {
           console.log('Supabase connection successful');
+          // Get current user
+          const { data: { user } } = await supabase.auth.getUser();
+          setUser(user);
         } else {
           console.error('Supabase connection failed - API query test unsuccessful');
           toast({
@@ -42,15 +51,24 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
         console.error('Error checking Supabase:', error);
         setIsSupabaseConfigured(false);
       } finally {
-        setChecking(false);
+        setIsLoading(false);
       }
     };
 
     checkSupabase();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
-    <SupabaseContext.Provider value={{ isSupabaseConfigured }}>
+    <SupabaseContext.Provider value={{ isSupabaseConfigured, user, isLoading }}>
       {children}
     </SupabaseContext.Provider>
   );

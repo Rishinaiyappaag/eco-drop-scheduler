@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SupabaseProvider, useSupabase } from "@/lib/SupabaseProvider";
 import Index from "./pages/Index";
 import Schedule from "./pages/Schedule";
@@ -23,7 +23,31 @@ const queryClient = new QueryClient();
 
 // Component that checks Supabase config before rendering routes
 const AppRoutes = () => {
-  const { isSupabaseConfigured } = useSupabase();
+  const { isSupabaseConfigured, user, isLoading } = useSupabase();
+
+  // Protected route component
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <NavBar />
+          <div className="flex-grow flex items-center justify-center p-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading...</p>
+            </div>
+          </div>
+          <Footer />
+        </div>
+      );
+    }
+
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+
+    return <>{children}</>;
+  };
 
   if (!isSupabaseConfigured) {
     return (
@@ -59,9 +83,21 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/schedule" element={<Schedule />} />
-      <Route path="/drop-off" element={<DropOff />} />
-      <Route path="/rewards" element={<Rewards />} />
+      <Route path="/schedule" element={
+        <ProtectedRoute>
+          <Schedule />
+        </ProtectedRoute>
+      } />
+      <Route path="/drop-off" element={
+        <ProtectedRoute>
+          <DropOff />
+        </ProtectedRoute>
+      } />
+      <Route path="/rewards" element={
+        <ProtectedRoute>
+          <Rewards />
+        </ProtectedRoute>
+      } />
       <Route path="/learn" element={<Learn />} />
       <Route path="/faq" element={<FAQ />} />
       <Route path="/blog" element={<Blog />} />
