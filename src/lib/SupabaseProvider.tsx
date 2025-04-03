@@ -39,6 +39,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
           // Get current user
           const { data: { user } } = await supabase.auth.getUser();
           setUser(user);
+          console.log('Current user:', user);
         } else {
           console.error('Supabase connection failed - API query test unsuccessful');
           toast({
@@ -59,6 +60,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user);
       setUser(session?.user || null);
     });
 
