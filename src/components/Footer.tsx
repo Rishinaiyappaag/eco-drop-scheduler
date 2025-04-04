@@ -92,20 +92,20 @@ const Footer = () => {
             <ul className="space-y-2">
               <li className="flex items-center">
                 <Mail size={16} className="mr-2" />
-                <a href="mailto:contact@ecodrop.example" className="text-gray-300 hover:text-white">
-                  contact@ecodrop.example
+                <a href="mailto:rishinaiyappaag@gmail.com" className="text-gray-300 hover:text-white">
+                  rishinaiyappaag@gmail.com
                 </a>
               </li>
               <li className="flex items-center">
                 <Phone size={16} className="mr-2" />
-                <a href="tel:+11234567890" className="text-gray-300 hover:text-white">
-                  +1 123 456 7890
+                <a href="tel:+918105730319" className="text-gray-300 hover:text-white">
+                  +91 810 573 0319
                 </a>
               </li>
               <li className="flex items-center">
                 <MapPin size={16} className="mr-2" />
                 <span className="text-gray-300">
-                  123 Green Street, Eco City
+                  Bangalore, India
                 </span>
               </li>
             </ul>
