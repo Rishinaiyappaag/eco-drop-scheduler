@@ -2,7 +2,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
-import { signOut } from "@/lib/auth";
 
 interface MobileNavigationProps {
   user: any;

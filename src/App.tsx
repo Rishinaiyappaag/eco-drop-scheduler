@@ -16,6 +16,7 @@ import Partners from "./pages/Partners";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
@@ -129,6 +130,11 @@ const AppRoutes = () => {
       <Route path="/rewards" element={
         <ProtectedRoute>
           <Rewards />
+        </ProtectedRoute>
+      } />
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
