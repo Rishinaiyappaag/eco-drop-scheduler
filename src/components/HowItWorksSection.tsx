@@ -1,5 +1,6 @@
 
 import { Laptop, Smartphone, Cpu, Cable, Zap } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const HowItWorksSection = () => {
   const steps = [
@@ -43,22 +44,26 @@ const HowItWorksSection = () => {
 
         <div className="mt-16">
           <div className="relative">
-            {/* Line connecting the steps */}
-            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-primary-100 -translate-y-1/2" aria-hidden="true"></div>
-            
             {/* Steps */}
             <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-              {steps.map((step) => (
-                <div key={step.id} className="relative">
-                  <div className="flex flex-col items-center">
-                    <div className="flex-shrink-0 bg-white border-4 border-primary rounded-full h-16 w-16 flex items-center justify-center z-10 relative animate-pulse-gentle">
-                      {step.icon}
-                    </div>
-                    <h3 className="mt-6 text-xl font-bold text-gray-900">{step.title}</h3>
-                    <p className="mt-2 text-center text-base text-gray-600">
-                      {step.description}
-                    </p>
+              {steps.map((step, index) => (
+                <div key={step.id} className="relative flex flex-col items-center">
+                  {/* Connect steps with line for medium screens and up, but not for the last item */}
+                  {index < steps.length - 1 && (
+                    <div className="hidden md:block absolute top-8 left-1/2 w-full h-0.5 bg-gray-200" style={{ left: '50%', width: '100%' }}></div>
+                  )}
+                  
+                  <div className="flex-shrink-0 bg-white border-4 border-primary rounded-full h-16 w-16 flex items-center justify-center z-10 relative animate-pulse-gentle">
+                    {step.icon}
                   </div>
+                  
+                  <h3 className="mt-6 text-xl font-bold text-gray-900 text-center">
+                    {step.title}
+                  </h3>
+                  
+                  <p className="mt-2 text-center text-base text-gray-600">
+                    {step.description}
+                  </p>
                 </div>
               ))}
             </div>
