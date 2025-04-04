@@ -27,6 +27,11 @@ const queryClient = new QueryClient();
 const AppRoutes = () => {
   const { isSupabaseConfigured, user, isLoading } = useSupabase();
 
+  // Debug user state
+  useEffect(() => {
+    console.log("AppRoutes user state:", { user, isLoading });
+  }, [user, isLoading]);
+
   // Protected route component
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (isLoading) {
@@ -48,6 +53,32 @@ const AppRoutes = () => {
       return <Navigate to="/login" replace />;
     }
 
+    return <>{children}</>;
+  };
+
+  // Admin route component 
+  const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex flex-col">
+          <NavBar />
+          <div className="flex-grow flex items-center justify-center p-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading...</p>
+            </div>
+          </div>
+          <Footer />
+        </div>
+      );
+    }
+    
+    // For demo purposes, we'll allow any authenticated user to access admin
+    // In a real app, you'd check for admin roles
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+    
     return <>{children}</>;
   };
 
@@ -101,9 +132,9 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
-        <ProtectedRoute>
+        <AdminRoute>
           <Admin />
-        </ProtectedRoute>
+        </AdminRoute>
       } />
       <Route path="/learn" element={<Learn />} />
       <Route path="/faq" element={<FAQ />} />
