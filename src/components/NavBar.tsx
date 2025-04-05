@@ -8,6 +8,16 @@ import { useNavigate } from "react-router-dom";
 import BrandLogo from "./navigation/BrandLogo";
 import DesktopNavigation from "./navigation/DesktopNavigation";
 import MobileNavigation from "./navigation/MobileNavigation";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { User, Settings, Gift, LogOut } from "lucide-react";
 
 const NavBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,7 +45,7 @@ const NavBar = () => {
   console.log("Current authentication state:", { isLoggedIn: !!user, userId: user?.id });
 
   return (
-    <nav className="bg-white shadow-sm fixed w-full top-0 z-50">
+    <nav className="bg-white dark:bg-gray-800 shadow-sm fixed w-full top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <BrandLogo />
@@ -47,7 +57,7 @@ const NavBar = () => {
           <div className="flex md:hidden items-center">
             <button 
               onClick={toggleMenu}
-              className="p-2 rounded-md text-gray-700 hover:text-primary focus:outline-none"
+              className="p-2 rounded-md text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary focus:outline-none"
             >
               {isMenuOpen ? (
                 <X className="h-6 w-6" />
