@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import type { MapContainerProps } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -79,7 +78,7 @@ const MapSection = () => {
   return (
     <div className="h-96 rounded-lg overflow-hidden shadow-md">
       <MapContainer 
-        center={defaultCenter}
+        center={defaultCenter as L.LatLngExpression}
         zoom={defaultZoom} 
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
@@ -92,7 +91,7 @@ const MapSection = () => {
         {dropOffLocations.map((location) => (
           <Marker 
             key={location.id}
-            position={location.position}
+            position={location.position as L.LatLngExpression}
           >
             <Popup>
               <div>
