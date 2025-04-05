@@ -72,13 +72,13 @@ const MapSection = () => {
     </div>;
   }
 
-  const defaultCenter: [number, number] = [40.7128, -74.0060]; // NYC coordinates
+  const defaultCenter: L.LatLngExpression = [40.7128, -74.0060]; // NYC coordinates
   const defaultZoom = 13;
 
   return (
     <div className="h-96 rounded-lg overflow-hidden shadow-md">
       <MapContainer 
-        center={defaultCenter as L.LatLngExpression}
+        center={defaultCenter}
         zoom={defaultZoom} 
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
@@ -91,7 +91,7 @@ const MapSection = () => {
         {dropOffLocations.map((location) => (
           <Marker 
             key={location.id}
-            position={location.position as L.LatLngExpression}
+            position={location.position}
           >
             <Popup>
               <div>
