@@ -1,4 +1,5 @@
 
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Card,
   CardContent,
@@ -35,6 +36,8 @@ const rewards = [
 ];
 
 const RewardsSection = () => {
+  const isMobile = useIsMobile();
+  
   // In a real app, these would come from the user's profile
   const userPoints = 175;
   const nextRewardPoints = 250;
@@ -48,22 +51,22 @@ const RewardsSection = () => {
   ];
   
   return (
-    <section className="py-16 bg-gradient-to-r from-primary-50 to-secondary-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+    <section className="py-8 md:py-16 bg-gradient-to-r from-primary-50 to-secondary-50">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 sm:text-4xl">
             Earn Rewards for Recycling
           </h2>
-          <p className="mt-4 max-w-2xl text-xl text-gray-600 mx-auto">
-            Get rewarded for your environmental responsibility. Earn points for every recycling action and redeem them for eco-friendly rewards.
+          <p className="mt-3 md:mt-4 max-w-2xl text-lg md:text-xl text-gray-600 mx-auto">
+            Get rewarded for your environmental responsibility. Earn points for every recycling action.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* User's rewards status */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle>Your Rewards</CardTitle>
+        <div className="grid grid-cols-1 gap-6 md:gap-8">
+          {/* User's rewards status - Always display first on mobile */}
+          <Card className="w-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl md:text-2xl">Your Rewards</CardTitle>
               <CardDescription>
                 Track your progress and points
               </CardDescription>
@@ -104,15 +107,15 @@ const RewardsSection = () => {
           </Card>
 
           {/* Available rewards */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Available Rewards</CardTitle>
+          <Card className="w-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl md:text-2xl">Available Rewards</CardTitle>
               <CardDescription>
                 Redeem your points for these eco-friendly rewards
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {rewards.map((reward) => (
                   <div 
                     key={reward.id} 
@@ -133,7 +136,7 @@ const RewardsSection = () => {
                     <h4 className="font-medium text-gray-900">{reward.title}</h4>
                     <p className="text-sm text-gray-600 mt-1">{reward.description}</p>
                     <button 
-                      className={`mt-4 text-sm font-medium py-1 px-3 rounded-md ${
+                      className={`mt-auto text-sm font-medium py-2 px-3 rounded-md w-full ${
                         userPoints >= reward.points 
                           ? "bg-primary text-white hover:bg-primary-600"
                           : "bg-gray-300 text-gray-600 cursor-not-allowed"
