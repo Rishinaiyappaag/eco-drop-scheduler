@@ -115,11 +115,11 @@ const RewardsSection = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {rewards.map((reward) => (
                   <div 
                     key={reward.id} 
-                    className={`border rounded-lg p-4 flex flex-col ${
+                    className={`border rounded-lg p-4 flex flex-col h-full ${
                       userPoints >= reward.points 
                         ? "border-primary bg-primary-50 hover:shadow-md transition" 
                         : "border-gray-200 bg-gray-50 opacity-75"
@@ -133,8 +133,8 @@ const RewardsSection = () => {
                         {reward.points} pts
                       </Badge>
                     </div>
-                    <h4 className="font-medium text-gray-900">{reward.title}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{reward.description}</p>
+                    <h4 className="font-medium text-gray-900 text-base sm:text-lg">{reward.title}</h4>
+                    <p className="text-sm text-gray-600 mt-1 mb-4">{reward.description}</p>
                     <button 
                       className={`mt-auto text-sm font-medium py-2 px-3 rounded-md w-full ${
                         userPoints >= reward.points 
