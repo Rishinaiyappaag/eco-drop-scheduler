@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
 
@@ -16,6 +15,8 @@ export const signUp = async ({
   last_name
 }: SignUpCredentials) => {
   try {
+    console.log("Signing up with:", { email, first_name, last_name });
+    
     // Create the user in Supabase Auth with email/password only (no magic links)
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -27,31 +28,33 @@ export const signUp = async ({
         },
         emailRedirectTo: window.location.origin // Redirect back to the app after email verification
       }
-    })
+    });
+
+    console.log("Sign up response:", data, error);
 
     if (error) {
-      throw error
+      throw error;
     }
 
     if (data.user) {
       toast({
         title: 'Account created!',
         description: 'Please check your email to verify your account.',
-      })
+      });
       
-      return { success: true, user: data.user }
+      return { success: true, user: data.user };
     }
     
-    return { success: false }
+    return { success: false };
     
   } catch (error: any) {
-    console.error('Signup error:', error)
+    console.error('Signup error:', error);
     toast({
       title: 'Registration failed',
       description: error.message || 'Failed to create account. Please try again.',
       variant: 'destructive'
-    })
-    return { success: false, error }
+    });
+    return { success: false, error };
   }
 }
 
