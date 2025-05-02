@@ -1,17 +1,20 @@
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase, checkSupabaseConnection } from './supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { User } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 
 interface SupabaseContextType {
   isSupabaseConfigured: boolean;
   user: User | null;
+  session: Session | null;
   isLoading: boolean;
 }
 
 const SupabaseContext = createContext<SupabaseContextType>({
   isSupabaseConfigured: false,
   user: null,
+  session: null,
   isLoading: true
 });
 
@@ -22,43 +25,50 @@ interface SupabaseProviderProps {
 }
 
 export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
-  // We set isSupabaseConfigured to true initially to avoid the error screen
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkSupabase = async () => {
+    // Set up auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      console.log('Auth state changed:', event, currentSession?.user);
+      setSession(currentSession);
+      setUser(currentSession?.user || null);
+      
+      if (event === 'SIGNED_IN' && currentSession?.user) {
+        toast({
+          title: "Signed in successfully",
+          description: `Welcome${currentSession.user.user_metadata?.first_name ? ', ' + currentSession.user.user_metadata.first_name : ''}!`,
+        });
+      }
+    });
+
+    // Then check for existing session
+    const checkSession = async () => {
       try {
         setIsLoading(true);
-        // We'll still try to test the connection but won't show the error screen
-        const isConnected = await checkSupabaseConnection();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('Current session:', currentSession);
         
-        if (isConnected) {
-          console.log('Supabase connection successful');
-          // Get current user
-          const { data: { user } } = await supabase.auth.getUser();
-          console.log('Current user from auth.getUser():', user);
-          setUser(user);
-        } else {
-          console.error('Supabase connection failed - API query test unsuccessful');
-          // Don't need the toast as we're not showing the error screen
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        
+        // Test connection to verify Supabase is configured
+        const { error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+        if (error) {
+          console.warn('Supabase connection issue:', error);
+          // We'll still consider Supabase configured, just log the warning
         }
       } catch (error) {
-        console.error('Error checking Supabase:', error);
-        // We keep the isSupabaseConfigured state as true to bypass the error screen
+        console.error('Error checking Supabase session:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    checkSupabase();
-
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session?.user);
-      setUser(session?.user || null);
-    });
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
@@ -66,7 +76,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   }, []);
 
   return (
-    <SupabaseContext.Provider value={{ isSupabaseConfigured, user, isLoading }}>
+    <SupabaseContext.Provider value={{ isSupabaseConfigured, user, session, isLoading }}>
       {children}
     </SupabaseContext.Provider>
   );

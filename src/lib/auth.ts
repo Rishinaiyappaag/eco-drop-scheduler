@@ -1,5 +1,5 @@
 
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
 
 export type SignUpCredentials = {
@@ -34,30 +34,10 @@ export const signUp = async ({
     }
 
     if (data.user) {
-      // Create a profile in the profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          first_name,
-          last_name,
-          email,
-          reward_points: 0
-        })
-
-      if (profileError) {
-        console.error('Error creating profile:', profileError)
-        toast({
-          title: 'Profile creation failed',
-          description: 'Your account was created but profile setup failed.',
-          variant: 'destructive'
-        })
-      } else {
-        toast({
-          title: 'Account created!',
-          description: 'Please check your email to verify your account.',
-        })
-      }
+      toast({
+        title: 'Account created!',
+        description: 'Please check your email to verify your account.',
+      })
       
       return { success: true, user: data.user }
     }
