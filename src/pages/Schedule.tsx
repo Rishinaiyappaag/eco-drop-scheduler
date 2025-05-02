@@ -28,8 +28,8 @@ const Schedule = () => {
           
           {!isLoading && !user && (
             <div className="max-w-2xl mx-auto mb-8">
-              <Alert variant="warning">
-                <InfoIcon className="h-4 w-4" />
+              <Alert variant="default" className="border-amber-500 bg-amber-50">
+                <InfoIcon className="h-4 w-4 text-amber-600" />
                 <AlertTitle>Sign in recommended</AlertTitle>
                 <AlertDescription>
                   To earn reward points and track your pickups, please sign in or create an account.
