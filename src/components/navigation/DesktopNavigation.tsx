@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Settings, Gift } from "lucide-react";
 import { useSupabase } from "@/lib/SupabaseProvider";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { Profile } from "@/lib/supabase";
+import { Tables } from "@/integrations/supabase/types";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -20,6 +20,9 @@ interface DesktopNavigationProps {
   user: any;
   handleSignOut: () => Promise<void>;
 }
+
+// Define a Profile type using the Tables utility from Supabase types
+type Profile = Tables<"profiles">;
 
 const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);

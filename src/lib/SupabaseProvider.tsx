@@ -31,13 +31,46 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log("SupabaseProvider initializing");
+    
     // Set up auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      console.log('Auth state changed:', event, currentSession?.user);
+      console.log('Auth state changed:', event, currentSession?.user?.id);
+      
+      if (currentSession?.user) {
+        console.log('User metadata:', currentSession.user.user_metadata);
+        console.log('User email:', currentSession.user.email);
+      }
+      
       setSession(currentSession);
       setUser(currentSession?.user || null);
       
       if (event === 'SIGNED_IN' && currentSession?.user) {
+        // Check if profile exists or was created
+        const checkProfile = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', currentSession.user.id)
+              .single();
+            
+            console.log('Profile check result:', { data, error });
+            
+            // If there's an error, the profile might not exist
+            if (error) {
+              console.warn('Profile might not exist:', error);
+            }
+          } catch (err) {
+            console.error('Error checking profile existence:', err);
+          }
+        };
+        
+        // Use setTimeout to prevent Supabase deadlocks
+        setTimeout(() => {
+          checkProfile();
+        }, 0);
+        
         toast({
           title: "Signed in successfully",
           description: `Welcome${currentSession.user.user_metadata?.first_name ? ', ' + currentSession.user.user_metadata.first_name : ''}!`,
@@ -50,13 +83,19 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
       try {
         setIsLoading(true);
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log('Current session:', currentSession);
+        console.log('Current session:', currentSession?.user?.id);
+        
+        if (currentSession?.user) {
+          console.log('Session user metadata:', currentSession.user.user_metadata);
+        }
         
         setSession(currentSession);
         setUser(currentSession?.user || null);
         
         // Test connection to verify Supabase is configured
-        const { error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+        const { error, count } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+        console.log('Profiles table check:', { error, count });
+        
         if (error) {
           console.warn('Supabase connection issue:', error);
           // We'll still consider Supabase configured, just log the warning

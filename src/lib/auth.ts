@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
 
@@ -31,6 +32,39 @@ export const signUp = async ({
     });
 
     console.log("Sign up response:", data, error);
+
+    // Check if we need to manually create a profile (in case the trigger didn't work)
+    if (data.user && !error) {
+      try {
+        // Check if profile already exists
+        const { data: existingProfile, error: profileCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .single();
+          
+        console.log("Profile check:", { existingProfile, profileCheckError });
+          
+        // If profile doesn't exist, create it manually
+        if (profileCheckError && profileCheckError.code === 'PGRST116') {
+          console.log("Creating profile manually...");
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              first_name,
+              last_name,
+              email
+            })
+            .select()
+            .single();
+            
+          console.log("Manual profile creation:", { newProfile, createError });
+        }
+      } catch (profileError) {
+        console.error("Error handling profile:", profileError);
+      }
+    }
 
     if (error) {
       throw error;

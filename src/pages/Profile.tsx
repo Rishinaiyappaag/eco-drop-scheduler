@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabase } from "@/lib/SupabaseProvider";
-import { supabase } from "@/lib/supabase";
-import { Profile as ProfileType } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Home, Gift, Settings, LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
+
+// Define Profile type using Supabase types
+type ProfileType = Tables<"profiles">;
 
 const Profile = () => {
   const { user } = useSupabase();
@@ -30,6 +33,7 @@ const Profile = () => {
       
       try {
         setLoading(true);
+        console.log("Fetching profile for user:", user.id);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -37,9 +41,11 @@ const Profile = () => {
           .single();
         
         if (error) {
+          console.error("Error from Supabase:", error);
           throw error;
         }
         
+        console.log("Profile data received:", data);
         setProfile(data);
       } catch (error: any) {
         console.error('Error fetching profile:', error.message);
@@ -110,15 +116,15 @@ const Profile = () => {
             <Card>
               <CardHeader className="text-center">
                 <Avatar className="h-24 w-24 mx-auto">
-                  <AvatarImage src="/placeholder.svg" alt={`${profile.first_name} ${profile.last_name}`} />
+                  <AvatarImage src="/placeholder.svg" alt={`${profile?.first_name} ${profile?.last_name}`} />
                   <AvatarFallback className="bg-primary text-white text-xl">
-                    {profile.first_name?.[0]}{profile.last_name?.[0]}
+                    {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                   </AvatarFallback>
                 </Avatar>
-                <CardTitle className="mt-4">{profile.first_name} {profile.last_name}</CardTitle>
-                <CardDescription>{profile.email}</CardDescription>
+                <CardTitle className="mt-4">{profile?.first_name} {profile?.last_name}</CardTitle>
+                <CardDescription>{profile?.email}</CardDescription>
                 <Badge variant="secondary" className="mt-2">
-                  {profile.reward_points} Reward Points
+                  {profile?.reward_points || 0} Reward Points
                 </Badge>
               </CardHeader>
               <CardContent>
