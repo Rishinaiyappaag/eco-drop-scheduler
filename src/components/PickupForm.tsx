@@ -29,6 +29,9 @@ import { format } from "date-fns";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/lib/SupabaseProvider";
+import { useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -58,47 +61,127 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const wasteTypes = [
-  { value: "computers", label: "Computers & Laptops" },
-  { value: "phones", label: "Mobile Phones & Tablets" },
-  { value: "tvs", label: "TVs & Monitors" },
-  { value: "printers", label: "Printers & Scanners" },
-  { value: "batteries", label: "Batteries" },
-  { value: "cables", label: "Cables & Chargers" },
-  { value: "appliances", label: "Small Appliances" },
-  { value: "other", label: "Other Electronics" },
+  { value: "computers", label: "Computers & Laptops", points: 50 },
+  { value: "phones", label: "Mobile Phones & Tablets", points: 25 },
+  { value: "tvs", label: "TVs & Monitors", points: 40 },
+  { value: "printers", label: "Printers & Scanners", points: 30 },
+  { value: "batteries", label: "Batteries", points: 10 },
+  { value: "cables", label: "Cables & Chargers", points: 5 },
+  { value: "appliances", label: "Small Appliances", points: 20 },
+  { value: "other", label: "Other Electronics", points: 15 },
 ];
 
 const PickupForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const { user } = useSupabase();
+  const navigate = useNavigate();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      email: "",
+      email: user?.email || "",
       phone: "",
       address: "",
       description: "",
     },
   });
 
+  // Pre-fill email if user is logged in
+  if (user?.email && !form.getValues().email) {
+    form.setValue("email", user.email);
+  }
+
   const onSubmit = async (data: FormValues) => {
+    if (!user) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be signed in to schedule a pickup.",
+        variant: "destructive"
+      });
+      navigate("/login");
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate API call
-    console.log("Form data submitted:", data);
-    
-    // Wait for 1 second to simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      console.log("Submitting pickup request:", data);
+      
+      // Get the waste type points
+      const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
+      const pointsToAdd = selectedWasteType?.points || 15; // Default to 15 if not found
+      
+      // Format the date for storage
+      const formattedDate = format(data.pickupDate, "yyyy-MM-dd");
+      
+      // Store the pickup request in e_waste_requests table
+      const { data: requestData, error: requestError } = await supabase
+        .from('e_waste_requests')
+        .insert({
+          user_id: user.id,
+          waste_type: data.wasteType,
+          pickup_time: formattedDate,
+          status: 'pending',
+          address: data.address,
+          phone: data.phone,
+          description: data.description || ''
+        })
+        .select();
+      
+      console.log("Pickup request result:", { requestData, requestError });
+      
+      if (requestError) {
+        throw requestError;
+      }
+      
+      // Update the user's profile with the new rewards points
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('reward_points')
+        .eq('id', user.id)
+        .single();
+      
+      console.log("Current profile:", { profile, profileError });
+      
+      if (profileError && profileError.code !== 'PGRST116') {
+        throw profileError;
+      }
+      
+      const currentPoints = profile?.reward_points || 0;
+      const newPoints = currentPoints + pointsToAdd;
+      
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from('profiles')
+        .update({ reward_points: newPoints })
+        .eq('id', user.id)
+        .select();
+      
+      console.log("Profile update result:", { updatedProfile, updateError });
+      
+      if (updateError) {
+        throw updateError;
+      }
+      
       toast({
         title: "Pickup Scheduled!",
-        description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. We'll send you a confirmation email shortly.`,
+        description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
       });
       
       form.reset();
-    }, 1000);
+      
+    } catch (error: any) {
+      console.error("Error scheduling pickup:", error);
+      
+      toast({
+        title: "Error scheduling pickup",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -185,7 +268,7 @@ const PickupForm = () => {
                   <SelectContent>
                     {wasteTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                        {type.label} (+{type.points} points)
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -9,13 +9,15 @@ interface SupabaseContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const SupabaseContext = createContext<SupabaseContextType>({
   isSupabaseConfigured: false,
   user: null,
   session: null,
-  isLoading: true
+  isLoading: true,
+  refreshProfile: async () => {}
 });
 
 export const useSupabase = () => useContext(SupabaseContext);
@@ -29,6 +31,27 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshProfile = async () => {
+    if (!user) return;
+    
+    try {
+      console.log("Refreshing profile for user:", user.id);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      console.log("Refreshed profile data:", { data, error });
+      
+      if (error) {
+        console.error("Error refreshing profile:", error);
+      }
+    } catch (err) {
+      console.error("Exception when refreshing profile:", err);
+    }
+  };
 
   useEffect(() => {
     console.log("SupabaseProvider initializing");
@@ -60,6 +83,31 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
             // If there's an error, the profile might not exist
             if (error) {
               console.warn('Profile might not exist:', error);
+              
+              // Try to create profile if it doesn't exist
+              if (error.code === 'PGRST116') {
+                console.log('Creating profile manually...');
+                const firstName = currentSession.user.user_metadata.first_name || '';
+                const lastName = currentSession.user.user_metadata.last_name || '';
+                
+                const { data: newProfile, error: createError } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: currentSession.user.id,
+                    first_name: firstName,
+                    last_name: lastName,
+                    email: currentSession.user.email,
+                    reward_points: 0
+                  })
+                  .select()
+                  .single();
+                
+                console.log("Manual profile creation:", { newProfile, createError });
+                
+                if (createError) {
+                  console.error("Failed to create profile:", createError);
+                }
+              }
             }
           } catch (err) {
             console.error('Error checking profile existence:', err);
@@ -115,7 +163,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   }, []);
 
   return (
-    <SupabaseContext.Provider value={{ isSupabaseConfigured, user, session, isLoading }}>
+    <SupabaseContext.Provider value={{ isSupabaseConfigured, user, session, isLoading, refreshProfile }}>
       {children}
     </SupabaseContext.Provider>
   );

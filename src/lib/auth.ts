@@ -54,7 +54,8 @@ export const signUp = async ({
               id: data.user.id,
               first_name,
               last_name,
-              email
+              email,
+              reward_points: 0
             })
             .select()
             .single();

@@ -10,6 +10,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Laptop, Smartphone, Tv, Gift, Battery, Award } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/lib/SupabaseProvider";
 
 const rewards = [
   {
@@ -35,15 +38,128 @@ const rewards = [
   },
 ];
 
+interface RecyclingHistoryItem {
+  id: number;
+  date: string;
+  type: string;
+  points: number;
+  icon: JSX.Element;
+}
+
 const RewardsSection = () => {
   const isMobile = useIsMobile();
+  const { user, refreshProfile } = useSupabase();
+  const [userPoints, setUserPoints] = useState(0);
+  const [recyclingHistory, setRecyclingHistory] = useState<RecyclingHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
   
-  // In a real app, these would come from the user's profile
-  const userPoints = 175;
   const nextRewardPoints = 250;
-  const progress = (userPoints / nextRewardPoints) * 100;
+  const progress = userPoints > 0 ? Math.min((userPoints / nextRewardPoints) * 100, 100) : 0;
   
-  const recyclingHistory = [
+  useEffect(() => {
+    const fetchUserPoints = async () => {
+      if (!user) {
+        setUserPoints(0);
+        return;
+      }
+      
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('reward_points')
+          .eq('id', user.id)
+          .single();
+        
+        console.log('Fetched user points:', { data, error });
+        
+        if (error) {
+          console.error('Error fetching user points:', error);
+          return;
+        }
+        
+        setUserPoints(data?.reward_points || 0);
+        
+        // Fetch recycling history
+        const { data: requests, error: requestsError } = await supabase
+          .from('e_waste_requests')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        console.log('Fetched recycling history:', { requests, requestsError });
+        
+        if (requestsError) {
+          console.error('Error fetching recycling history:', requestsError);
+          return;
+        }
+        
+        const history: RecyclingHistoryItem[] = requests?.map((request, index) => {
+          // Determine points based on waste type
+          let points = 10;
+          let icon = <Battery className="h-5 w-5" />;
+          
+          if (request.waste_type === 'computers') {
+            points = 50;
+            icon = <Laptop className="h-5 w-5" />;
+          } else if (request.waste_type === 'phones') {
+            points = 25;
+            icon = <Smartphone className="h-5 w-5" />;
+          } else if (request.waste_type === 'tvs') {
+            points = 40;
+            icon = <Tv className="h-5 w-5" />;
+          }
+          
+          // Format date
+          const date = new Date(request.created_at);
+          const formattedDate = date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          });
+          
+          return {
+            id: index + 1,
+            date: formattedDate,
+            type: request.waste_type.charAt(0).toUpperCase() + request.waste_type.slice(1),
+            points,
+            icon
+          };
+        }) || [];
+        
+        setRecyclingHistory(history);
+      } catch (error) {
+        console.error('Error in reward data fetching:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserPoints();
+    
+    // Set up subscription to listen for changes to the user's profile
+    if (user) {
+      const channel = supabase
+        .channel('profile-changes')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        }, () => {
+          console.log('Profile updated, refreshing points...');
+          fetchUserPoints();
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+  
+  // Generate placeholder recycling history if none exists
+  const displayHistory = recyclingHistory.length > 0 ? recyclingHistory : [
     { id: 1, date: "Apr 15, 2023", type: "Laptop", points: 50, icon: <Laptop className="h-5 w-5" /> },
     { id: 2, date: "Mar 22, 2023", type: "Smartphones (3)", points: 75, icon: <Smartphone className="h-5 w-5" /> },
     { id: 3, date: "Feb 10, 2023", type: "Television", points: 40, icon: <Tv className="h-5 w-5" /> },
@@ -86,7 +202,7 @@ const RewardsSection = () => {
               
               <h4 className="font-medium mb-4">Recycling History</h4>
               <div className="space-y-3">
-                {recyclingHistory.map((item) => (
+                {displayHistory.map((item) => (
                   <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
                     <div className="flex items-center">
                       <div className="bg-primary-100 p-2 rounded-full mr-3">

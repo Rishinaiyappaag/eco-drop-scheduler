@@ -2,8 +2,16 @@
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import PickupForm from "@/components/PickupForm";
+import { useSupabase } from "@/lib/SupabaseProvider";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { InfoIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Schedule = () => {
+  const { user, isLoading } = useSupabase();
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
@@ -17,6 +25,31 @@ const Schedule = () => {
               Let us pick up your e-waste at a time that's convenient for you.
             </p>
           </div>
+          
+          {!isLoading && !user && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <Alert variant="warning">
+                <InfoIcon className="h-4 w-4" />
+                <AlertTitle>Sign in recommended</AlertTitle>
+                <AlertDescription>
+                  To earn reward points and track your pickups, please sign in or create an account.
+                </AlertDescription>
+                <div className="mt-4 flex space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/login')}
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/register')}
+                  >
+                    Create Account
+                  </Button>
+                </div>
+              </Alert>
+            </div>
+          )}
           
           <div className="max-w-2xl mx-auto">
             <PickupForm />
