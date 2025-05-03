@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -108,6 +107,7 @@ const PickupForm = () => {
     
     try {
       console.log("Submitting pickup request:", data);
+      console.log("Current user:", user);
       
       // Get the waste type points
       const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
@@ -136,32 +136,61 @@ const PickupForm = () => {
         throw requestError;
       }
       
-      // Update the user's profile with the new rewards points
-      const { data: profile, error: profileError } = await supabase
+      // Check if the user has a profile before attempting to update points
+      const { data: profileCheck, error: profileCheckError } = await supabase
         .from('profiles')
-        .select('reward_points')
+        .select('id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
+        
+      console.log("Profile check:", { profileCheck, profileCheckError });
       
-      console.log("Current profile:", { profile, profileError });
-      
-      if (profileError && profileError.code !== 'PGRST116') {
-        throw profileError;
-      }
-      
-      const currentPoints = profile?.reward_points || 0;
-      const newPoints = currentPoints + pointsToAdd;
-      
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('profiles')
-        .update({ reward_points: newPoints })
-        .eq('id', user.id)
-        .select();
-      
-      console.log("Profile update result:", { updatedProfile, updateError });
-      
-      if (updateError) {
-        throw updateError;
+      // If profile doesn't exist, create it
+      if (!profileCheck && !profileCheckError) {
+        const { data: newProfile, error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            first_name: user.user_metadata?.first_name || '',
+            last_name: user.user_metadata?.last_name || '',
+            email: user.email || '',
+            reward_points: pointsToAdd
+          })
+          .select();
+          
+        console.log("New profile created:", { newProfile, createProfileError });
+        
+        if (createProfileError) {
+          throw createProfileError;
+        }
+      } else {
+        // Update the existing profile with the new reward points
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('reward_points')
+          .eq('id', user.id)
+          .maybeSingle();
+        
+        console.log("Current profile:", { profile, profileError });
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+        
+        const currentPoints = profile?.reward_points || 0;
+        const newPoints = currentPoints + pointsToAdd;
+        
+        const { data: updatedProfile, error: updateError } = await supabase
+          .from('profiles')
+          .update({ reward_points: newPoints })
+          .eq('id', user.id)
+          .select();
+        
+        console.log("Profile update result:", { updatedProfile, updateError });
+        
+        if (updateError) {
+          throw updateError;
+        }
       }
       
       toast({
