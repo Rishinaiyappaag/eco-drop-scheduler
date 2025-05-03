@@ -29,24 +29,33 @@ export type Database = {
       }
       e_waste_requests: {
         Row: {
+          address: string | null
           created_at: string | null
+          description: string | null
           id: string
+          phone: string | null
           pickup_time: string
           status: string | null
           user_id: string
           waste_type: string
         }
         Insert: {
+          address?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          phone?: string | null
           pickup_time: string
           status?: string | null
           user_id: string
           waste_type: string
         }
         Update: {
+          address?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
+          phone?: string | null
           pickup_time?: string
           status?: string | null
           user_id?: string

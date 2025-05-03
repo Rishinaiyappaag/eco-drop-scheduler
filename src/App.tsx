@@ -117,16 +117,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/schedule" element={
-        <ProtectedRoute>
-          <Schedule />
-        </ProtectedRoute>
-      } />
-      <Route path="/drop-off" element={
-        <ProtectedRoute>
-          <DropOff />
-        </ProtectedRoute>
-      } />
+      <Route path="/schedule" element={<Schedule />} />
+      <Route path="/drop-off" element={<DropOff />} />
       <Route path="/rewards" element={
         <ProtectedRoute>
           <Rewards />
