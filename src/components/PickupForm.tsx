@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { 
@@ -72,6 +73,7 @@ const wasteTypes = [
 
 const PickupForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [publicUserId, setPublicUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useSupabase();
   const navigate = useNavigate();
@@ -92,6 +94,61 @@ const PickupForm = () => {
     form.setValue("email", user.email);
   }
 
+  // Check or create public user record when auth user is available
+  useEffect(() => {
+    const createOrGetPublicUser = async () => {
+      if (!user) return;
+      
+      try {
+        // Check if user exists in the public.users table
+        const { data: existingUser, error: checkError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', user.email)
+          .maybeSingle();
+        
+        console.log("Checking for existing public user:", { existingUser, checkError });
+        
+        if (existingUser) {
+          // User exists, use this ID
+          setPublicUserId(existingUser.id);
+        } else {
+          // User doesn't exist in public.users table, create one
+          const { data: newUser, error: createError } = await supabase
+            .from('users')
+            .insert({
+              email: user.email || '',
+              name: user.user_metadata?.first_name 
+                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`
+                : 'Anonymous User',
+              phone_number: '',
+              address: ''
+            })
+            .select()
+            .single();
+          
+          console.log("Created new public user:", { newUser, createError });
+          
+          if (createError) {
+            console.error("Error creating public user:", createError);
+            toast({
+              title: "Error",
+              description: "Could not create user record. Please try again later.",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          setPublicUserId(newUser.id);
+        }
+      } catch (error) {
+        console.error("Error checking/creating public user:", error);
+      }
+    };
+    
+    createOrGetPublicUser();
+  }, [user, toast]);
+
   const onSubmit = async (data: FormValues) => {
     if (!user) {
       toast({
@@ -103,11 +160,21 @@ const PickupForm = () => {
       return;
     }
     
+    if (!publicUserId) {
+      toast({
+        title: "Error",
+        description: "User record not found. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
       console.log("Submitting pickup request:", data);
       console.log("Current user:", user);
+      console.log("Public user ID:", publicUserId);
       
       // Get the waste type points
       const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
@@ -116,11 +183,11 @@ const PickupForm = () => {
       // Format the date for storage
       const formattedDate = format(data.pickupDate, "yyyy-MM-dd");
       
-      // Store the pickup request in e_waste_requests table
+      // Store the pickup request in e_waste_requests table using public user ID
       const { data: requestData, error: requestError } = await supabase
         .from('e_waste_requests')
         .insert({
-          user_id: user.id,
+          user_id: publicUserId, // Use the public user ID here
           waste_type: data.wasteType,
           pickup_time: formattedDate,
           status: 'pending',
@@ -393,7 +460,7 @@ const PickupForm = () => {
           />
           
           {/* Submit Button */}
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || !publicUserId}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 

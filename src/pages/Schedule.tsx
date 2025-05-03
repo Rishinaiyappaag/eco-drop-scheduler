@@ -2,11 +2,11 @@
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import PickupForm from "@/components/PickupForm";
-import { useSupabase } from "@/lib/SupabaseProvider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { InfoIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useSupabase } from "@/lib/SupabaseProvider";
 
 const Schedule = () => {
   const { user, isLoading } = useSupabase();
