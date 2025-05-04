@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { signUp } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   
@@ -118,7 +119,14 @@ const Register = () => {
           title: "Registration successful!",
           description: "Welcome to EcoDrop! Please check your email to verify your account.",
         });
-        navigate('/');
+        
+        // Check if this registration came from a pickup request
+        const fromPickup = location.search.includes('from=pickup');
+        if (fromPickup) {
+          navigate('/schedule');
+        } else {
+          navigate('/');
+        }
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -126,6 +134,9 @@ const Register = () => {
       setIsLoading(false);
     }
   };
+
+  // Check if there's a "from=pickup" query parameter to customize the messaging
+  const isFromPickup = location.search.includes('from=pickup');
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -137,9 +148,18 @@ const Register = () => {
               Create Your EcoDrop Account
             </h1>
             <p className="mt-2 text-gray-600">
-              Join our community and start recycling responsibly
+              {isFromPickup 
+                ? "Complete your registration to track your pickups and earn rewards" 
+                : "Join our community and start recycling responsibly"}
             </p>
           </div>
+          
+          {isFromPickup && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
+              <p className="font-medium">Almost there!</p>
+              <p className="text-sm">Creating an account will let you track your e-waste pickups, earn reward points, and get access to exclusive offers.</p>
+            </div>
+          )}
           
           <div className="bg-white p-8 rounded-lg shadow-md">
             <form onSubmit={handleSubmit}>

@@ -42,7 +42,7 @@ const Schedule = () => {
                     Sign In
                   </Button>
                   <Button
-                    onClick={() => navigate('/register')}
+                    onClick={() => navigate('/register?from=pickup')}
                   >
                     Create Account
                   </Button>

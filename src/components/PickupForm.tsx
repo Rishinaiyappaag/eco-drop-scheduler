@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -72,7 +73,6 @@ const wasteTypes = [
 
 const PickupForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [publicUserId, setPublicUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useSupabase();
   const navigate = useNavigate();
@@ -93,56 +93,15 @@ const PickupForm = () => {
     if (user?.email && !form.getValues().email) {
       form.setValue("email", user.email);
     }
-  }, [user, form]);
-
-  // Check or create public user record when auth user is available
-  useEffect(() => {
-    const createOrGetPublicUser = async () => {
-      if (!user) return;
-      
-      try {
-        // Check if user exists in the public.users table
-        const { data: existingUser, error: checkError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', user.email)
-          .maybeSingle();
-        
-        console.log("Checking for existing public user:", { existingUser, checkError });
-        
-        if (existingUser) {
-          // User exists, use this ID
-          setPublicUserId(existingUser.id);
-        } else {
-          // User doesn't exist in public.users table, create one
-          const { data: newUser, error: createError } = await supabase
-            .from('users')
-            .insert({
-              email: user.email || '',
-              name: form.getValues().name || 'Anonymous User',
-              phone_number: form.getValues().phone || '',
-              address: form.getValues().address || ''
-            })
-            .select()
-            .single();
-          
-          console.log("Created new public user:", { newUser, createError });
-          
-          if (createError) {
-            console.error("Error creating public user:", createError);
-            return;
-          }
-          
-          if (newUser) {
-            setPublicUserId(newUser.id);
-          }
-        }
-      } catch (error) {
-        console.error("Error checking/creating public user:", error);
-      }
-    };
     
-    createOrGetPublicUser();
+    // Pre-fill name from user metadata if available
+    if (user?.user_metadata) {
+      const firstName = user.user_metadata.first_name || "";
+      const lastName = user.user_metadata.last_name || "";
+      if (firstName || lastName) {
+        form.setValue("name", `${firstName} ${lastName}`.trim());
+      }
+    }
   }, [user, form]);
 
   const onSubmit = async (data: FormValues) => {
@@ -150,125 +109,38 @@ const PickupForm = () => {
     setIsSubmitting(true);
     
     try {
-      // Step 1: Create or update user record in public.users table
-      let userId: string | null = null;
-      
-      // Try up to 3 times to create the user record (handling potential race conditions)
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          if (!publicUserId) {
-            // Create new user record
-            console.log("Creating new public user with data:", {
-              email: data.email,
-              name: data.name,
-              phone_number: data.phone,
-              address: data.address
-            });
-            
-            const { data: newUser, error: createError } = await supabase
-              .from('users')
-              .insert({
-                email: data.email,
-                name: data.name,
-                phone_number: data.phone,
-                address: data.address
-              })
-              .select()
-              .single();
-            
-            console.log("Create user result:", { newUser, createError });
-            
-            if (createError) {
-              // Check if it's a unique constraint violation (user might already exist)
-              if (createError.code === '23505') {
-                // User likely exists, try to get the ID
-                const { data: existingUser, error: fetchError } = await supabase
-                  .from('users')
-                  .select('id')
-                  .eq('email', data.email)
-                  .maybeSingle();
-                
-                if (fetchError || !existingUser) {
-                  console.error("Error fetching existing user after constraint violation:", fetchError);
-                  throw new Error("Could not retrieve existing user");
-                }
-                
-                userId = existingUser.id;
-                break;
-              } else {
-                if (attempt === 2) { // Last attempt
-                  throw new Error("Could not create user record: " + createError.message);
-                }
-                // Wait a bit before retrying
-                await new Promise(resolve => setTimeout(resolve, 500));
-                continue;
-              }
-            }
-            
-            if (newUser) {
-              userId = newUser.id;
-              break;
-            }
-          } else {
-            // Update existing user record
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({
-                name: data.name,
-                phone_number: data.phone,
-                address: data.address
-              })
-              .eq('id', publicUserId);
-            
-            if (updateError) {
-              console.error("Error updating user information:", updateError);
-              // Continue anyway, this isn't critical
-            }
-            
-            userId = publicUserId;
-            break;
-          }
-        } catch (err) {
-          console.error(`Attempt ${attempt + 1} failed:`, err);
-          if (attempt === 2) { // Last attempt
-            throw err;
-          }
-        }
-      }
-      
-      if (!userId) {
-        throw new Error("Failed to create or retrieve user record");
-      }
-      
-      // Step 2: Get the waste type points
-      const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
-      const pointsToAdd = selectedWasteType?.points || 15; // Default to 15 if not found
-      
       // Format the date for storage
       const formattedDate = format(data.pickupDate, "yyyy-MM-dd");
       
-      // Step 3: Store the pickup request in e_waste_requests table using public user ID
-      const { data: requestData, error: requestError } = await supabase
-        .from('e_waste_requests')
-        .insert({
-          user_id: userId,
-          waste_type: data.wasteType,
-          pickup_time: formattedDate,
-          status: 'pending',
-          address: data.address,
-          phone: data.phone,
-          description: data.description || ''
-        })
-        .select();
+      // Get the waste type points
+      const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
+      const pointsToAdd = selectedWasteType?.points || 15; // Default to 15 if not found
       
-      console.log("Pickup request result:", { requestData, requestError });
-      
-      if (requestError) {
-        throw new Error("Error storing pickup request: " + requestError.message);
-      }
-      
-      // Step 4: Only update reward points for logged-in users
       if (user) {
+        // For authenticated users, directly use the authenticated user's ID
+        console.log("Creating pickup request for authenticated user:", user.id);
+        
+        // Store the pickup request in e_waste_requests table
+        const { data: requestData, error: requestError } = await supabase
+          .from('e_waste_requests')
+          .insert({
+            user_id: user.id, // Use the authenticated user ID directly
+            waste_type: data.wasteType,
+            pickup_time: formattedDate,
+            status: 'pending',
+            address: data.address,
+            phone: data.phone,
+            description: data.description || ''
+          })
+          .select();
+        
+        console.log("Pickup request result:", { requestData, requestError });
+        
+        if (requestError) {
+          throw new Error("Error storing pickup request: " + requestError.message);
+        }
+        
+        // Update reward points for the user
         try {
           // Check if the user has a profile before attempting to update points
           const { data: profileCheck, error: profileCheckError } = await supabase
@@ -296,7 +168,6 @@ const PickupForm = () => {
             
             if (createProfileError) {
               console.error("Error creating profile:", createProfileError);
-              // Continue anyway, just can't award points
             }
           } else if (profileCheck) {
             // Update the existing profile with the new reward points
@@ -325,11 +196,42 @@ const PickupForm = () => {
           description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
         });
       } else {
-        // For non-logged-in users
+        // For non-authenticated users, store pickup as a guest request
+        console.log("Creating pickup request for guest user");
+        
+        // Create anonymous pickup request
+        const { data: requestData, error: requestError } = await supabase
+          .from('e_waste_requests')
+          .insert({
+            // Leave user_id as null for guest requests
+            waste_type: data.wasteType,
+            pickup_time: formattedDate,
+            status: 'pending',
+            address: data.address,
+            phone: data.phone,
+            description: `Guest Request - Name: ${data.name}, Email: ${data.email}, ${data.description || ''}`
+          })
+          .select();
+        
+        console.log("Guest pickup request result:", { requestData, requestError });
+        
+        if (requestError) {
+          throw new Error("Error storing pickup request: " + requestError.message);
+        }
+        
         toast({
           title: "Pickup Scheduled!",
-          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}.`,
+          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. Create an account to earn reward points!`,
         });
+        
+        // Suggest creating an account
+        setTimeout(() => {
+          toast({
+            title: "Create an Account",
+            description: "Sign up to track your pickups and earn reward points!",
+            action: <Button onClick={() => navigate('/register')} size="sm">Sign Up</Button>
+          });
+        }, 2000);
       }
       
       // Reset form after successful submission
