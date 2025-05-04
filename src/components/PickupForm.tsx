@@ -196,14 +196,51 @@ const PickupForm = () => {
           description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
         });
       } else {
-        // For non-authenticated users, store pickup as a guest request
+        // For non-authenticated users, we need to create a system user to fulfill the user_id requirement
         console.log("Creating pickup request for guest user");
         
-        // Create anonymous pickup request
+        // Create a placeholder user_id using a predefined guest user
+        // First, check if our guest user exists
+        const guestEmail = "guest@ecodrop.example";
+        const { data: existingGuest, error: guestCheckError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', guestEmail)
+          .maybeSingle();
+          
+        console.log("Guest user check:", { existingGuest, guestCheckError });
+        
+        let guestUserId: string;
+        
+        if (!existingGuest) {
+          // Create a guest user if it doesn't exist
+          const { data: newGuestUser, error: createGuestError } = await supabase
+            .from('users')
+            .insert({
+              email: guestEmail,
+              name: "Guest User",
+              phone_number: "0000000000",
+              address: "Guest Address"
+            })
+            .select('id')
+            .single();
+            
+          console.log("New guest user:", { newGuestUser, createGuestError });
+          
+          if (createGuestError || !newGuestUser) {
+            throw new Error("Error creating guest user: " + (createGuestError?.message || "Unknown error"));
+          }
+          
+          guestUserId = newGuestUser.id;
+        } else {
+          guestUserId = existingGuest.id;
+        }
+        
+        // Create anonymous pickup request with the guest user ID
         const { data: requestData, error: requestError } = await supabase
           .from('e_waste_requests')
           .insert({
-            // Leave user_id as null for guest requests
+            user_id: guestUserId, // Use the guest user ID to satisfy the NOT NULL constraint
             waste_type: data.wasteType,
             pickup_time: formattedDate,
             status: 'pending',
