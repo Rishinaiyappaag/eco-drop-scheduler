@@ -124,7 +124,7 @@ const PickupForm = () => {
         const { data: requestData, error: requestError } = await supabase
           .from('e_waste_requests')
           .insert({
-            user_id: user.id, // Use the authenticated user ID directly
+            user_id: user.id,
             waste_type: data.wasteType,
             pickup_time: formattedDate,
             status: 'pending',
@@ -196,57 +196,22 @@ const PickupForm = () => {
           description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
         });
       } else {
-        // For non-authenticated users, we need to create a system user to fulfill the user_id requirement
+        // For non-authenticated users, we need to store as a guest
         console.log("Creating pickup request for guest user");
         
-        // Create a placeholder user_id using a predefined guest user
-        // First, check if our guest user exists
-        const guestEmail = "guest@ecodrop.example";
-        const { data: existingGuest, error: guestCheckError } = await supabase
-          .from('users')
-          .select('id')
-          .eq('email', guestEmail)
-          .maybeSingle();
-          
-        console.log("Guest user check:", { existingGuest, guestCheckError });
+        // Store the guest information in the description field
+        const guestDescription = `Guest Request - Name: ${data.name}, Email: ${data.email}, ${data.description || ''}`;
         
-        let guestUserId: string;
-        
-        if (!existingGuest) {
-          // Create a guest user if it doesn't exist
-          const { data: newGuestUser, error: createGuestError } = await supabase
-            .from('users')
-            .insert({
-              email: guestEmail,
-              name: "Guest User",
-              phone_number: "0000000000",
-              address: "Guest Address"
-            })
-            .select('id')
-            .single();
-            
-          console.log("New guest user:", { newGuestUser, createGuestError });
-          
-          if (createGuestError || !newGuestUser) {
-            throw new Error("Error creating guest user: " + (createGuestError?.message || "Unknown error"));
-          }
-          
-          guestUserId = newGuestUser.id;
-        } else {
-          guestUserId = existingGuest.id;
-        }
-        
-        // Create anonymous pickup request with the guest user ID
+        // Create pickup request without user_id for guest
         const { data: requestData, error: requestError } = await supabase
           .from('e_waste_requests')
           .insert({
-            user_id: guestUserId, // Use the guest user ID to satisfy the NOT NULL constraint
             waste_type: data.wasteType,
             pickup_time: formattedDate,
             status: 'pending',
             address: data.address,
             phone: data.phone,
-            description: `Guest Request - Name: ${data.name}, Email: ${data.email}, ${data.description || ''}`
+            description: guestDescription
           })
           .select();
         

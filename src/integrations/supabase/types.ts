@@ -29,47 +29,39 @@ export type Database = {
       }
       e_waste_requests: {
         Row: {
-          address: string | null
-          created_at: string | null
+          address: string
+          created_at: string
           description: string | null
           id: string
-          phone: string | null
+          phone: string
           pickup_time: string
-          status: string | null
-          user_id: string
+          status: string
+          user_id: string | null
           waste_type: string
         }
         Insert: {
-          address?: string | null
-          created_at?: string | null
+          address: string
+          created_at?: string
           description?: string | null
           id?: string
-          phone?: string | null
+          phone: string
           pickup_time: string
-          status?: string | null
-          user_id: string
+          status?: string
+          user_id?: string | null
           waste_type: string
         }
         Update: {
-          address?: string | null
-          created_at?: string | null
+          address?: string
+          created_at?: string
           description?: string | null
           id?: string
-          phone?: string | null
+          phone?: string
           pickup_time?: string
-          status?: string | null
-          user_id?: string
+          status?: string
+          user_id?: string | null
           waste_type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "e_waste_requests_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
