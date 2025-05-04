@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -118,11 +117,9 @@ const PickupForm = () => {
             .from('users')
             .insert({
               email: user.email || '',
-              name: user.user_metadata?.first_name 
-                ? `${user.user_metadata.first_name} ${user.user_metadata.last_name || ''}`
-                : 'Anonymous User',
-              phone_number: '',
-              address: ''
+              name: form.getValues().name || 'Anonymous User',
+              phone_number: form.getValues().phone || '',
+              address: form.getValues().address || ''
             })
             .select()
             .single();
@@ -147,34 +144,55 @@ const PickupForm = () => {
     };
     
     createOrGetPublicUser();
-  }, [user, toast]);
+  }, [user, toast, form]);
 
   const onSubmit = async (data: FormValues) => {
-    if (!user) {
-      toast({
-        title: "Please sign in",
-        description: "You need to be signed in to schedule a pickup.",
-        variant: "destructive"
-      });
-      navigate("/login");
-      return;
-    }
-    
-    if (!publicUserId) {
-      toast({
-        title: "Error",
-        description: "User record not found. Please try again.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsSubmitting(true);
+    console.log("Form submitted with data:", data);
     
     try {
-      console.log("Submitting pickup request:", data);
-      console.log("Current user:", user);
-      console.log("Public user ID:", publicUserId);
+      // If user is not logged in, we'll create a record just for this pickup
+      let userId = publicUserId;
+      
+      // If no user is logged in or public user hasn't been created yet, create one for this submission
+      if (!userId) {
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            email: data.email,
+            name: data.name,
+            phone_number: data.phone,
+            address: data.address
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error("Error creating public user during submission:", createError);
+          throw new Error("Could not create user record");
+        }
+        
+        userId = newUser.id;
+        console.log("Created new user during submission:", newUser);
+      } else {
+        // Update the existing user record with the latest information
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            name: data.name,
+            phone_number: data.phone,
+            address: data.address
+          })
+          .eq('id', userId);
+        
+        if (updateError) {
+          console.error("Error updating user information:", updateError);
+          // Continue anyway, this isn't critical
+        }
+      }
+      
+      setIsSubmitting(true);
+      
+      console.log("Processing with user ID:", userId);
       
       // Get the waste type points
       const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
@@ -187,7 +205,7 @@ const PickupForm = () => {
       const { data: requestData, error: requestError } = await supabase
         .from('e_waste_requests')
         .insert({
-          user_id: publicUserId, // Use the public user ID here
+          user_id: userId,
           waste_type: data.wasteType,
           pickup_time: formattedDate,
           status: 'pending',
@@ -203,67 +221,66 @@ const PickupForm = () => {
         throw requestError;
       }
       
-      // Check if the user has a profile before attempting to update points
-      const { data: profileCheck, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-        
-      console.log("Profile check:", { profileCheck, profileCheckError });
-      
-      // If profile doesn't exist, create it
-      if (!profileCheck && !profileCheckError) {
-        const { data: newProfile, error: createProfileError } = await supabase
+      // Only update reward points for logged-in users
+      if (user) {
+        // Check if the user has a profile before attempting to update points
+        const { data: profileCheck, error: profileCheckError } = await supabase
           .from('profiles')
-          .insert({
-            id: user.id,
-            first_name: user.user_metadata?.first_name || '',
-            last_name: user.user_metadata?.last_name || '',
-            email: user.email || '',
-            reward_points: pointsToAdd
-          })
-          .select();
-          
-        console.log("New profile created:", { newProfile, createProfileError });
-        
-        if (createProfileError) {
-          throw createProfileError;
-        }
-      } else {
-        // Update the existing profile with the new reward points
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('reward_points')
+          .select('id, reward_points')
           .eq('id', user.id)
           .maybeSingle();
+          
+        console.log("Profile check:", { profileCheck, profileCheckError });
         
-        console.log("Current profile:", { profile, profileError });
-        
-        if (profileError && profileError.code !== 'PGRST116') {
-          throw profileError;
+        // If profile doesn't exist, create it
+        if (!profileCheck && !profileCheckError) {
+          const { data: newProfile, error: createProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              first_name: user.user_metadata?.first_name || data.name.split(' ')[0] || '',
+              last_name: user.user_metadata?.last_name || data.name.split(' ')[1] || '',
+              email: user.email || data.email,
+              reward_points: pointsToAdd
+            })
+            .select();
+            
+          console.log("New profile created:", { newProfile, createProfileError });
+          
+          if (createProfileError) {
+            console.error("Error creating profile:", createProfileError);
+            // Continue anyway, just can't award points
+          }
+        } else if (profileCheck) {
+          // Update the existing profile with the new reward points
+          const currentPoints = profileCheck.reward_points || 0;
+          const newPoints = currentPoints + pointsToAdd;
+          
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({ reward_points: newPoints })
+            .eq('id', user.id)
+            .select();
+          
+          console.log("Profile update result:", { updatedProfile, updateError });
+          
+          if (updateError) {
+            console.error("Error updating profile:", updateError);
+            // Continue anyway, just couldn't update points
+          }
         }
         
-        const currentPoints = profile?.reward_points || 0;
-        const newPoints = currentPoints + pointsToAdd;
-        
-        const { data: updatedProfile, error: updateError } = await supabase
-          .from('profiles')
-          .update({ reward_points: newPoints })
-          .eq('id', user.id)
-          .select();
-        
-        console.log("Profile update result:", { updatedProfile, updateError });
-        
-        if (updateError) {
-          throw updateError;
-        }
+        toast({
+          title: "Pickup Scheduled!",
+          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
+        });
+      } else {
+        // For non-logged-in users
+        toast({
+          title: "Pickup Scheduled!",
+          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}.`,
+        });
       }
-      
-      toast({
-        title: "Pickup Scheduled!",
-        description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
-      });
       
       form.reset();
       
@@ -460,7 +477,7 @@ const PickupForm = () => {
           />
           
           {/* Submit Button */}
-          <Button type="submit" className="w-full" disabled={isSubmitting || !publicUserId}>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
