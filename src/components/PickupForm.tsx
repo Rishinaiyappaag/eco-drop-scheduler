@@ -89,9 +89,11 @@ const PickupForm = () => {
   });
 
   // Pre-fill email if user is logged in
-  if (user?.email && !form.getValues().email) {
-    form.setValue("email", user.email);
-  }
+  useEffect(() => {
+    if (user?.email && !form.getValues().email) {
+      form.setValue("email", user.email);
+    }
+  }, [user, form]);
 
   // Check or create public user record when auth user is available
   useEffect(() => {
@@ -128,15 +130,12 @@ const PickupForm = () => {
           
           if (createError) {
             console.error("Error creating public user:", createError);
-            toast({
-              title: "Error",
-              description: "Could not create user record. Please try again later.",
-              variant: "destructive"
-            });
             return;
           }
           
-          setPublicUserId(newUser.id);
+          if (newUser) {
+            setPublicUserId(newUser.id);
+          }
         }
       } catch (error) {
         console.error("Error checking/creating public user:", error);
@@ -144,64 +143,111 @@ const PickupForm = () => {
     };
     
     createOrGetPublicUser();
-  }, [user, toast, form]);
+  }, [user, form]);
 
   const onSubmit = async (data: FormValues) => {
     console.log("Form submitted with data:", data);
+    setIsSubmitting(true);
     
     try {
-      // If user is not logged in, we'll create a record just for this pickup
-      let userId = publicUserId;
+      // Step 1: Create or update user record in public.users table
+      let userId: string | null = null;
       
-      // If no user is logged in or public user hasn't been created yet, create one for this submission
-      if (!userId) {
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            email: data.email,
-            name: data.name,
-            phone_number: data.phone,
-            address: data.address
-          })
-          .select()
-          .single();
-        
-        if (createError) {
-          console.error("Error creating public user during submission:", createError);
-          throw new Error("Could not create user record");
-        }
-        
-        userId = newUser.id;
-        console.log("Created new user during submission:", newUser);
-      } else {
-        // Update the existing user record with the latest information
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            name: data.name,
-            phone_number: data.phone,
-            address: data.address
-          })
-          .eq('id', userId);
-        
-        if (updateError) {
-          console.error("Error updating user information:", updateError);
-          // Continue anyway, this isn't critical
+      // Try up to 3 times to create the user record (handling potential race conditions)
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (!publicUserId) {
+            // Create new user record
+            console.log("Creating new public user with data:", {
+              email: data.email,
+              name: data.name,
+              phone_number: data.phone,
+              address: data.address
+            });
+            
+            const { data: newUser, error: createError } = await supabase
+              .from('users')
+              .insert({
+                email: data.email,
+                name: data.name,
+                phone_number: data.phone,
+                address: data.address
+              })
+              .select()
+              .single();
+            
+            console.log("Create user result:", { newUser, createError });
+            
+            if (createError) {
+              // Check if it's a unique constraint violation (user might already exist)
+              if (createError.code === '23505') {
+                // User likely exists, try to get the ID
+                const { data: existingUser, error: fetchError } = await supabase
+                  .from('users')
+                  .select('id')
+                  .eq('email', data.email)
+                  .maybeSingle();
+                
+                if (fetchError || !existingUser) {
+                  console.error("Error fetching existing user after constraint violation:", fetchError);
+                  throw new Error("Could not retrieve existing user");
+                }
+                
+                userId = existingUser.id;
+                break;
+              } else {
+                if (attempt === 2) { // Last attempt
+                  throw new Error("Could not create user record: " + createError.message);
+                }
+                // Wait a bit before retrying
+                await new Promise(resolve => setTimeout(resolve, 500));
+                continue;
+              }
+            }
+            
+            if (newUser) {
+              userId = newUser.id;
+              break;
+            }
+          } else {
+            // Update existing user record
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({
+                name: data.name,
+                phone_number: data.phone,
+                address: data.address
+              })
+              .eq('id', publicUserId);
+            
+            if (updateError) {
+              console.error("Error updating user information:", updateError);
+              // Continue anyway, this isn't critical
+            }
+            
+            userId = publicUserId;
+            break;
+          }
+        } catch (err) {
+          console.error(`Attempt ${attempt + 1} failed:`, err);
+          if (attempt === 2) { // Last attempt
+            throw err;
+          }
         }
       }
       
-      setIsSubmitting(true);
+      if (!userId) {
+        throw new Error("Failed to create or retrieve user record");
+      }
       
-      console.log("Processing with user ID:", userId);
-      
-      // Get the waste type points
+      // Step 2: Get the waste type points
       const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
       const pointsToAdd = selectedWasteType?.points || 15; // Default to 15 if not found
       
       // Format the date for storage
       const formattedDate = format(data.pickupDate, "yyyy-MM-dd");
       
-      // Store the pickup request in e_waste_requests table using public user ID
+      // Step 3: Store the pickup request in e_waste_requests table using public user ID
       const { data: requestData, error: requestError } = await supabase
         .from('e_waste_requests')
         .insert({
@@ -218,56 +264,60 @@ const PickupForm = () => {
       console.log("Pickup request result:", { requestData, requestError });
       
       if (requestError) {
-        throw requestError;
+        throw new Error("Error storing pickup request: " + requestError.message);
       }
       
-      // Only update reward points for logged-in users
+      // Step 4: Only update reward points for logged-in users
       if (user) {
-        // Check if the user has a profile before attempting to update points
-        const { data: profileCheck, error: profileCheckError } = await supabase
-          .from('profiles')
-          .select('id, reward_points')
-          .eq('id', user.id)
-          .maybeSingle();
-          
-        console.log("Profile check:", { profileCheck, profileCheckError });
-        
-        // If profile doesn't exist, create it
-        if (!profileCheck && !profileCheckError) {
-          const { data: newProfile, error: createProfileError } = await supabase
+        try {
+          // Check if the user has a profile before attempting to update points
+          const { data: profileCheck, error: profileCheckError } = await supabase
             .from('profiles')
-            .insert({
-              id: user.id,
-              first_name: user.user_metadata?.first_name || data.name.split(' ')[0] || '',
-              last_name: user.user_metadata?.last_name || data.name.split(' ')[1] || '',
-              email: user.email || data.email,
-              reward_points: pointsToAdd
-            })
-            .select();
-            
-          console.log("New profile created:", { newProfile, createProfileError });
-          
-          if (createProfileError) {
-            console.error("Error creating profile:", createProfileError);
-            // Continue anyway, just can't award points
-          }
-        } else if (profileCheck) {
-          // Update the existing profile with the new reward points
-          const currentPoints = profileCheck.reward_points || 0;
-          const newPoints = currentPoints + pointsToAdd;
-          
-          const { data: updatedProfile, error: updateError } = await supabase
-            .from('profiles')
-            .update({ reward_points: newPoints })
+            .select('id, reward_points')
             .eq('id', user.id)
-            .select();
+            .maybeSingle();
+            
+          console.log("Profile check:", { profileCheck, profileCheckError });
           
-          console.log("Profile update result:", { updatedProfile, updateError });
-          
-          if (updateError) {
-            console.error("Error updating profile:", updateError);
-            // Continue anyway, just couldn't update points
+          // If profile doesn't exist, create it
+          if (!profileCheck && !profileCheckError) {
+            const { data: newProfile, error: createProfileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                first_name: user.user_metadata?.first_name || data.name.split(' ')[0] || '',
+                last_name: user.user_metadata?.last_name || data.name.split(' ')[1] || '',
+                email: user.email || data.email,
+                reward_points: pointsToAdd
+              })
+              .select();
+              
+            console.log("New profile created:", { newProfile, createProfileError });
+            
+            if (createProfileError) {
+              console.error("Error creating profile:", createProfileError);
+              // Continue anyway, just can't award points
+            }
+          } else if (profileCheck) {
+            // Update the existing profile with the new reward points
+            const currentPoints = profileCheck.reward_points || 0;
+            const newPoints = currentPoints + pointsToAdd;
+            
+            const { data: updatedProfile, error: updateError } = await supabase
+              .from('profiles')
+              .update({ reward_points: newPoints })
+              .eq('id', user.id)
+              .select();
+            
+            console.log("Profile update result:", { updatedProfile, updateError });
+            
+            if (updateError) {
+              console.error("Error updating profile:", updateError);
+            }
           }
+        } catch (profileErr) {
+          // Log but don't fail the whole operation
+          console.error("Profile update error:", profileErr);
         }
         
         toast({
@@ -282,6 +332,7 @@ const PickupForm = () => {
         });
       }
       
+      // Reset form after successful submission
       form.reset();
       
     } catch (error: any) {
