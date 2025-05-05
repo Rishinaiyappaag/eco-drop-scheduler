@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -37,7 +38,7 @@ export const wasteTypes: WasteTypeOption[] = [
 export const usePickupFormSubmit = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { user } = useSupabase();
+  const { user, refreshProfile } = useSupabase();
   const navigate = useNavigate();
 
   const handleSubmit = async (data: PickupFormValues) => {
@@ -122,6 +123,9 @@ export const usePickupFormSubmit = () => {
               console.error("Error updating profile:", updateError);
             }
           }
+          
+          // Refresh the profile data in the context after updating points
+          await refreshProfile();
         } catch (profileErr) {
           // Log but don't fail the whole operation
           console.error("Profile update error:", profileErr);
@@ -167,11 +171,7 @@ export const usePickupFormSubmit = () => {
           toast({
             title: "Create an Account",
             description: "Sign up to track your pickups and earn reward points!",
-            action: (
-              <Button onClick={() => navigate('/register')} size="sm">
-                Sign Up
-              </Button>
-            )
+            action: <Button onClick={() => navigate('/register')} size="sm">Sign Up</Button>
           });
         }, 2000);
       }

@@ -1,3 +1,4 @@
+
 import { Form } from "@/components/ui/form";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import { usePickupForm } from "@/hooks/usePickupForm";
@@ -22,8 +23,8 @@ const PickupForm = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">Schedule Your Pickup</h3>
+    <div className="bg-white p-6 rounded-lg shadow-lg dark:bg-gray-800 dark:text-gray-100">
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 dark:text-white">Schedule Your Pickup</h3>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

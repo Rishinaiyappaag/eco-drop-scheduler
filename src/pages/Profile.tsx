@@ -12,13 +12,31 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { User, Home, Gift, Settings, LogOut } from "lucide-react";
+import { User, Home, Gift, Settings, LogOut, Edit, Check } from "lucide-react";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
+import { Switch } from "@/components/ui/switch";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 // Define Profile type using Supabase types
 type ProfileType = Tables<"profiles">;
+
+// Define profile edit form schema
+const profileFormSchema = z.object({
+  first_name: z.string().min(1, "First name is required"),
+  last_name: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const Profile = () => {
   const { user } = useSupabase();
@@ -26,6 +44,19 @@ const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Form definition
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone: "",
+      address: ""
+    }
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -47,6 +78,15 @@ const Profile = () => {
         
         console.log("Profile data received:", data);
         setProfile(data);
+        
+        // Set form default values
+        form.reset({
+          first_name: data.first_name || "",
+          last_name: data.last_name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || ""
+        });
       } catch (error: any) {
         console.error('Error fetching profile:', error.message);
         toast({
@@ -60,7 +100,7 @@ const Profile = () => {
     };
 
     fetchProfile();
-  }, [user, toast]);
+  }, [user, toast, form]);
 
   const handleSignOut = async () => {
     const success = await signOut();
@@ -70,6 +110,49 @@ const Profile = () => {
         description: "You have been signed out successfully.",
       });
       navigate('/');
+    }
+  };
+  
+  const onSubmitProfileEdit = async (values: ProfileFormValues) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: values.first_name,
+          last_name: values.last_name,
+          email: values.email,
+          phone: values.phone || null,
+          address: values.address || null,
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      // Refresh profile data
+      const { data: updatedProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      setProfile(updatedProfile);
+      setIsEditing(false);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile information has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error updating profile",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -167,33 +250,130 @@ const Profile = () => {
               
               <TabsContent value="profile" className="mt-6">
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Personal Information</CardTitle>
-                    <CardDescription>Manage your personal details</CardDescription>
+                  <CardHeader className="flex flex-row justify-between items-start">
+                    <div>
+                      <CardTitle>Personal Information</CardTitle>
+                      <CardDescription>Manage your personal details</CardDescription>
+                    </div>
+                    {!isEditing && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-1"
+                        onClick={() => setIsEditing(true)}
+                      >
+                        <Edit size={16} />
+                        <span>Edit</span>
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="font-medium text-sm text-gray-500">Full Name</h3>
-                        <p className="text-lg">{profile.first_name} {profile.last_name}</p>
+                    {isEditing ? (
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmitProfileEdit)} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="first_name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>First Name</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="last_name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Last Name</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="address"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Address</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" type="button" onClick={() => setIsEditing(false)}>
+                              Cancel
+                            </Button>
+                            <Button type="submit">
+                              <Check size={16} className="mr-1" />
+                              Save Changes
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    ) : (
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-medium text-sm text-gray-500">Full Name</h3>
+                          <p className="text-lg">{profile.first_name} {profile.last_name}</p>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm text-gray-500">Email</h3>
+                          <p className="text-lg">{profile.email}</p>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm text-gray-500">Phone</h3>
+                          <p className="text-lg">{profile.phone || 'Not set'}</p>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-sm text-gray-500">Address</h3>
+                          <p className="text-lg">{profile.address || 'Not set'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-medium text-sm text-gray-500">Email</h3>
-                        <p className="text-lg">{profile.email}</p>
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-sm text-gray-500">Phone</h3>
-                        <p className="text-lg">{profile.phone || 'Not set'}</p>
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-sm text-gray-500">Address</h3>
-                        <p className="text-lg">{profile.address || 'Not set'}</p>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
-                  <CardFooter>
-                    <Button>Edit Profile</Button>
-                  </CardFooter>
                 </Card>
               </TabsContent>
 
@@ -234,7 +414,7 @@ const Profile = () => {
                   <CardFooter>
                     <div className="w-full">
                       <h3 className="text-sm font-medium mb-2">Progress to next reward</h3>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
                         <div 
                           className="bg-primary h-2.5 rounded-full" 
                           style={{ width: `${Math.min((profile.reward_points % 100) * 100 / 100, 100)}%` }}
@@ -268,7 +448,7 @@ const Profile = () => {
                         <h3 className="font-medium">Email Notifications</h3>
                         <p className="text-sm text-gray-500">Receive pickup and reward notifications</p>
                       </div>
-                      <Button variant="outline" size="sm">Manage</Button>
+                      <Switch defaultChecked />
                     </div>
                     <Separator />
                     <div className="flex items-center justify-between">
