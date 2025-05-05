@@ -53,6 +53,8 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
             last_name: user.user_metadata?.last_name || '',
             email: user.email || '',
             reward_points: 0,
+            address: null,
+            phone: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });

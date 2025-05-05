@@ -42,7 +42,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .maybeSingle(); // Changed from single() to maybeSingle()
+        .maybeSingle(); 
       
       console.log("Refreshed profile data:", { data, error });
       
@@ -114,7 +114,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
               .from('profiles')
               .select('*')
               .eq('id', currentSession.user.id)
-              .maybeSingle(); // Changed from single() to maybeSingle()
+              .maybeSingle();
             
             console.log('Profile check result:', { data, error });
             
