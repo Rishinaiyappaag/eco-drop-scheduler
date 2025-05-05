@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabase } from "@/lib/SupabaseProvider";
-import { Button } from "@/components/ui/button"; // Import the Button component
+import { Button } from "@/components/ui/button"; 
 
 export type PickupFormValues = {
   name: string;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSupabase } from "@/lib/SupabaseProvider";
@@ -39,7 +38,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const Profile = () => {
-  const { user } = useSupabase();
+  const { user, refreshProfile } = useSupabase();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [profile, setProfile] = useState<ProfileType | null>(null);
@@ -69,7 +68,7 @@ const Profile = () => {
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle(); // Changed from single() to maybeSingle()
         
         if (error) {
           console.error("Error from Supabase:", error);
@@ -77,16 +76,50 @@ const Profile = () => {
         }
         
         console.log("Profile data received:", data);
-        setProfile(data);
         
-        // Set form default values
-        form.reset({
-          first_name: data.first_name || "",
-          last_name: data.last_name || "",
-          email: data.email || "",
-          phone: data.phone || "",
-          address: data.address || ""
-        });
+        // If profile doesn't exist, create one
+        if (!data) {
+          console.log("No profile found, creating a new one");
+          const firstName = user.user_metadata?.first_name || '';
+          const lastName = user.user_metadata?.last_name || '';
+          
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              first_name: firstName,
+              last_name: lastName,
+              email: user.email || '',
+              reward_points: 0
+            })
+            .select()
+            .maybeSingle();
+          
+          if (createError) {
+            console.error("Failed to create profile:", createError);
+            throw createError;
+          }
+          
+          setProfile(newProfile);
+          // Set form default values
+          form.reset({
+            first_name: newProfile?.first_name || firstName,
+            last_name: newProfile?.last_name || lastName,
+            email: newProfile?.email || user.email || '',
+            phone: newProfile?.phone || '',
+            address: newProfile?.address || ''
+          });
+        } else {
+          setProfile(data);
+          // Set form default values
+          form.reset({
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            address: data.address || ""
+          });
+        }
       } catch (error: any) {
         console.error('Error fetching profile:', error.message);
         toast({
@@ -135,12 +168,15 @@ const Profile = () => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle()
       
       if (fetchError) throw fetchError;
       
       setProfile(updatedProfile);
       setIsEditing(false);
+      
+      // Also refresh the profile in the context
+      await refreshProfile();
       
       toast({
         title: "Profile updated",

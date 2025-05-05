@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { User, Session } from '@supabase/supabase-js';
 
 interface SupabaseContextType {
@@ -31,6 +31,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   const refreshProfile = async () => {
     if (!user) return;
@@ -41,15 +42,52 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle()
       
       console.log("Refreshed profile data:", { data, error });
       
       if (error) {
         console.error("Error refreshing profile:", error);
       }
+      
+      // If profile doesn't exist, create one
+      if (!data && !error) {
+        console.log("No profile found, creating new profile");
+        await createUserProfile(user);
+      }
     } catch (err) {
       console.error("Exception when refreshing profile:", err);
+    }
+  };
+  
+  // Function to create user profile
+  const createUserProfile = async (currentUser: User) => {
+    try {
+      const firstName = currentUser.user_metadata?.first_name || '';
+      const lastName = currentUser.user_metadata?.last_name || '';
+      
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: currentUser.id,
+          first_name: firstName,
+          last_name: lastName,
+          email: currentUser.email || '',
+          reward_points: 0
+        })
+        .select()
+        .maybeSingle();
+      
+      console.log("Profile creation result:", { newProfile, createError });
+      
+      if (createError) {
+        console.error("Failed to create profile:", createError);
+      }
+      
+      return newProfile;
+    } catch (err) {
+      console.error("Exception when creating profile:", err);
+      return null;
     }
   };
 
@@ -76,38 +114,16 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
               .from('profiles')
               .select('*')
               .eq('id', currentSession.user.id)
-              .single();
+              .maybeSingle(); // Changed from single() to maybeSingle()
             
             console.log('Profile check result:', { data, error });
             
-            // If there's an error, the profile might not exist
-            if (error) {
-              console.warn('Profile might not exist:', error);
-              
-              // Try to create profile if it doesn't exist
-              if (error.code === 'PGRST116') {
-                console.log('Creating profile manually...');
-                const firstName = currentSession.user.user_metadata.first_name || '';
-                const lastName = currentSession.user.user_metadata.last_name || '';
-                
-                const { data: newProfile, error: createError } = await supabase
-                  .from('profiles')
-                  .insert({
-                    id: currentSession.user.id,
-                    first_name: firstName,
-                    last_name: lastName,
-                    email: currentSession.user.email,
-                    reward_points: 0
-                  })
-                  .select()
-                  .single();
-                
-                console.log("Manual profile creation:", { newProfile, createError });
-                
-                if (createError) {
-                  console.error("Failed to create profile:", createError);
-                }
-              }
+            // If no profile data and no error, create a profile
+            if (!data && !error) {
+              console.log('No profile exists, creating profile...');
+              await createUserProfile(currentSession.user);
+            } else if (error) {
+              console.error('Error checking profile:', error);
             }
           } catch (err) {
             console.error('Error checking profile existence:', err);
@@ -160,7 +176,7 @@ export const SupabaseProvider = ({ children }: SupabaseProviderProps) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [toast]);
 
   return (
     <SupabaseContext.Provider value={{ isSupabaseConfigured, user, session, isLoading, refreshProfile }}>

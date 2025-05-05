@@ -36,13 +36,27 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle(); // Changed from single() to maybeSingle()
         
         if (error) {
           throw error;
         }
         
-        setProfile(data);
+        if (data) {
+          setProfile(data);
+        } else {
+          // If no profile found, create default profile object for display purposes
+          // The actual profile creation will be handled by the SupabaseProvider
+          setProfile({
+            id: user.id,
+            first_name: user.user_metadata?.first_name || '',
+            last_name: user.user_metadata?.last_name || '',
+            email: user.email || '',
+            reward_points: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
       } catch (error: any) {
         console.error('Error fetching profile:', error.message);
       }
@@ -93,8 +107,8 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mt-1 bg-white dark:bg-gray-800" align="end">
               <DropdownMenuLabel>
-                <div className="font-semibold">{profile?.first_name} {profile?.last_name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{profile?.email}</div>
+                <div className="font-semibold">{profile?.first_name || ''} {profile?.last_name || ''}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{profile?.email || user?.email || ''}</div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => window.location.href = '/profile'} className="cursor-pointer">
