@@ -1,6 +1,4 @@
-
 import { Form } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import { usePickupForm } from "@/hooks/usePickupForm";
 import { usePickupFormSubmit, wasteTypes } from "@/hooks/usePickupFormSubmit";
