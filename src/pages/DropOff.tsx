@@ -1,6 +1,7 @@
 
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
+import MapSection from "@/components/MapSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, Clock, Phone } from "lucide-react";
 
@@ -20,21 +21,9 @@ const DropOff = () => {
           </div>
           
           <div className="space-y-8">
-            {/* Google Maps with Ecodrop Hotspots */}
-            <div className="rounded-lg overflow-hidden shadow-md">
-              <div className="aspect-video w-full">
-                <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3879.8795782998595!2d77.59335565282154!3d12.919072571552451!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sin!4v1746219465573!5m2!1sen!2sin" 
-                  width="100%" 
-                  height="100%" 
-                  style={{ border: 0 }} 
-                  allowFullScreen 
-                  loading="lazy" 
-                  referrerPolicy="no-referrer-when-downgrade"
-                  title="Ecodrop Hotspots"
-                  className="w-full h-full"
-                />
-              </div>
+            {/* Use MapSection instead of Google Maps iframe */}
+            <div className="h-96 rounded-lg overflow-hidden shadow-md">
+              <MapSection />
             </div>
             
             {/* Ecodrop Hotspots List */}
