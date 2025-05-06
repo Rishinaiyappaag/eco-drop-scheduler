@@ -21,17 +21,20 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   RefreshCw, 
   Activity, 
   ShoppingCart,
   ChartBar,
-  ChartPie
+  ChartPie,
+  Gift
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSupabase } from "@/lib/SupabaseProvider";
+import RewardsManager from "@/components/admin/RewardsManager";
 import {
   ChartContainer,
   ChartTooltip,
@@ -137,7 +140,7 @@ const Admin = () => {
   const [filteredOrders, setFilteredOrders] = useState(sampleOrders);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'orders' | 'dashboard'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'rewards'>('dashboard');
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useSupabase();
@@ -151,7 +154,7 @@ const Admin = () => {
   const pickupOrders = orders.filter(order => order.type === "Pickup").length;
   const dropOffOrders = orders.filter(order => order.type === "Drop-off").length;
 
-  // Check if user is admin (for demo: admin@ecodrop.com)
+  // Check if user is admin (for demo: admin@ecodrop.com or rishinaiyappaag@gmail.com)
   useEffect(() => {
     if (!user) {
       console.log("No user detected, redirecting to login");
@@ -163,7 +166,9 @@ const Admin = () => {
 
     // This is a simplified admin check for demo purposes
     // In a real app, you would check user roles from Supabase
-    if (user.email !== "admin@ecodrop.com") {
+    const isAdmin = user.email === "admin@ecodrop.com" || user.email === "rishinaiyappaag@gmail.com";
+    
+    if (!isAdmin) {
       console.log("User is not admin, redirecting to home");
       toast({
         title: "Access Denied",
@@ -251,6 +256,13 @@ const Admin = () => {
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Orders
+              </Button>
+              <Button 
+                onClick={() => setActiveTab('rewards')}
+                variant={activeTab === 'rewards' ? "default" : "outline"}
+              >
+                <Gift className="h-4 w-4 mr-2" />
+                Rewards
               </Button>
               <Button 
                 onClick={handleRefresh}
@@ -471,6 +483,11 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Rewards Management */}
+          {activeTab === 'rewards' && (
+            <RewardsManager />
           )}
         </div>
       </main>

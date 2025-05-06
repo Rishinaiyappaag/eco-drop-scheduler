@@ -11,19 +11,22 @@ export type Database = {
     Tables: {
       admins: {
         Row: {
+          created_at: string | null
           email: string
           id: string
-          name: string
+          name: string | null
         }
         Insert: {
+          created_at?: string | null
           email: string
-          id?: string
-          name: string
+          id: string
+          name?: string | null
         }
         Update: {
+          created_at?: string | null
           email?: string
           id?: string
-          name?: string
+          name?: string | null
         }
         Relationships: []
       }
@@ -96,6 +99,33 @@ export type Database = {
           phone?: string | null
           reward_points?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      rewards: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          points: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          points: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          points?: number
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
