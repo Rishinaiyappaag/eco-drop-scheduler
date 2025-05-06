@@ -8,39 +8,39 @@ import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 
-// Sample drop-off locations data
+// Sample drop-off locations data for Bengaluru
 const dropOffLocations = [
   {
     id: 1,
-    name: "EcoTech Recycling Center",
-    address: "123 Green Street, Anytown",
-    hours: "Mon-Fri: 9am-6pm, Sat: 10am-4pm",
+    name: "Eco Recyclers Hub",
+    address: "123 Koramangala Main Road, Bangalore - 560034",
+    hours: "Mon-Sat: 9am-6pm",
     phone: "(555) 123-4567",
-    position: [40.7128, -74.0060] as [number, number] // NYC coordinates
+    position: [12.9352, 77.6245] as [number, number] // Koramangala coordinates
   },
   {
     id: 2,
-    name: "Electronics Disposal Facility",
-    address: "456 Circuit Avenue, Techville",
-    hours: "Mon-Sat: 8am-7pm",
+    name: "Green Electronics Disposal",
+    address: "45 Indiranagar Main Road, Bangalore - 560038",
+    hours: "Mon-Sun: 10am-8pm",
     phone: "(555) 987-6543",
-    position: [40.7282, -73.9942] as [number, number]
+    position: [12.9784, 77.6408] as [number, number] // Indiranagar coordinates
   },
   {
     id: 3,
-    name: "Community Recycling Hub",
-    address: "789 Ecology Road, Greenfield",
-    hours: "Tue-Sun: 10am-5pm",
+    name: "Tech Waste Solutions",
+    address: "78 JP Nagar 2nd Phase, Bangalore - 560078",
+    hours: "Tue-Sun: 8am-7pm",
     phone: "(555) 345-6789",
-    position: [40.7023, -74.0186] as [number, number]
+    position: [12.9102, 77.5922] as [number, number] // JP Nagar coordinates
   },
   {
     id: 4,
-    name: "City E-Waste Collection",
-    address: "101 Municipal Way, Downtown",
+    name: "Bengaluru E-Waste Collection",
+    address: "101 MG Road, Bangalore - 560001",
     hours: "Mon-Fri: 9am-5pm",
     phone: "(555) 234-5678",
-    position: [40.7112, -73.9865] as [number, number]
+    position: [12.9757, 77.6011] as [number, number] // MG Road coordinates
   }
 ];
 
@@ -72,13 +72,14 @@ const MapSection = () => {
     </div>;
   }
 
-  const defaultCenter: L.LatLngExpression = [40.7128, -74.0060]; // NYC coordinates
-  const defaultZoom = 13;
+  // Center map on Bengaluru
+  const bengaluruCenter: L.LatLngExpression = [12.9716, 77.5946]; // Bengaluru city center
+  const defaultZoom = 12;
 
   return (
     <div className="h-96 rounded-lg overflow-hidden shadow-md">
       <MapContainer 
-        center={defaultCenter}
+        center={bengaluruCenter}
         zoom={defaultZoom} 
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={false}
