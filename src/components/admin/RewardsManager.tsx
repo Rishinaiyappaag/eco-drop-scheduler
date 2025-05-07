@@ -27,6 +27,16 @@ import {
   DialogHeader,
   DialogTitle 
 } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Gift, Edit, Trash2, Plus } from "lucide-react";
@@ -55,6 +65,10 @@ const RewardsManager = () => {
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formPoints, setFormPoints] = useState<number | string>("");
+
+  // Delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [rewardToDelete, setRewardToDelete] = useState<Reward | null>(null);
   
   const { toast } = useToast();
   
@@ -151,7 +165,7 @@ const RewardsManager = () => {
       console.error("Error adding reward:", error);
       toast({
         title: "Error",
-        description: "Failed to add reward. Please try again.",
+        description: `Failed to add reward: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -205,23 +219,27 @@ const RewardsManager = () => {
       console.error("Error updating reward:", error);
       toast({
         title: "Error",
-        description: "Failed to update reward. Please try again.",
+        description: `Failed to update reward: ${error.message}`,
         variant: "destructive"
       });
     }
   };
   
-  // Delete reward
-  const handleDeleteReward = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this reward?")) {
-      return;
-    }
+  // Open delete confirmation dialog
+  const openDeleteConfirmation = (reward: Reward) => {
+    setRewardToDelete(reward);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Delete reward with confirmation
+  const confirmDeleteReward = async () => {
+    if (!rewardToDelete) return;
     
     try {
       const { error } = await supabase
         .from("rewards")
         .delete()
-        .eq("id", id);
+        .eq("id", rewardToDelete.id);
         
       if (error) throw error;
       
@@ -230,14 +248,16 @@ const RewardsManager = () => {
         description: "Reward deleted successfully"
       });
       
-      // Refresh data
+      // Close dialog and refresh data
+      setDeleteDialogOpen(false);
+      setRewardToDelete(null);
       fetchRewards();
       
     } catch (error: any) {
       console.error("Error deleting reward:", error);
       toast({
         title: "Error",
-        description: "Failed to delete reward. Please try again.",
+        description: `Failed to delete reward: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -331,7 +351,12 @@ const RewardsManager = () => {
                           <Button variant="outline" size="sm" onClick={() => openEditDialog(reward)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDeleteReward(reward.id)}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => openDeleteConfirmation(reward)}
+                            className="hover:bg-red-50"
+                          >
                             <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
@@ -413,6 +438,28 @@ const RewardsManager = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the reward
+              "{rewardToDelete?.title}" from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteReward}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
@@ -29,12 +28,16 @@ import {
   ShoppingCart,
   ChartBar,
   ChartPie,
-  Gift
+  Gift,
+  Users,
+  Trash2,
+  Edit
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import RewardsManager from "@/components/admin/RewardsManager";
+import UsersManager from "@/components/admin/UsersManager";
 import {
   ChartContainer,
   ChartTooltip,
@@ -57,6 +60,7 @@ import {
   Legend,
   ResponsiveContainer
 } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
 
 // Sample orders data for demonstration
 const sampleOrders = [
@@ -140,10 +144,11 @@ const Admin = () => {
   const [filteredOrders, setFilteredOrders] = useState(sampleOrders);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'rewards'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'rewards' | 'users'>('dashboard');
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useSupabase();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Stats calculation
   const totalOrders = orders.length;
@@ -154,29 +159,54 @@ const Admin = () => {
   const pickupOrders = orders.filter(order => order.type === "Pickup").length;
   const dropOffOrders = orders.filter(order => order.type === "Drop-off").length;
 
-  // Check if user is admin (for demo: admin@ecodrop.com or rishinaiyappaag@gmail.com)
+  // Check if user is admin
   useEffect(() => {
-    if (!user) {
-      console.log("No user detected, redirecting to login");
-      navigate('/login');
-      return;
-    }
+    const checkIfAdmin = async () => {
+      if (!user) {
+        console.log("No user detected, redirecting to login");
+        navigate('/login');
+        return;
+      }
 
-    console.log("User logged in:", user.email);
+      console.log("User logged in:", user.email);
 
-    // This is a simplified admin check for demo purposes
-    // In a real app, you would check user roles from Supabase
-    const isAdmin = user.email === "admin@ecodrop.com" || user.email === "rishinaiyappaag@gmail.com";
-    
-    if (!isAdmin) {
-      console.log("User is not admin, redirecting to home");
-      toast({
-        title: "Access Denied",
-        description: "You don't have permission to access the admin dashboard.",
-        variant: "destructive"
-      });
-      navigate('/');
-    }
+      try {
+        // Check if the user is in the admins table
+        const { data, error } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error("Error checking admin status:", error);
+          throw error;
+        }
+        
+        if (data) {
+          console.log("User is admin:", data);
+          setIsAdmin(true);
+        } else {
+          console.log("User is not admin, redirecting to home");
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access the admin dashboard.",
+            variant: "destructive"
+          });
+          navigate('/');
+        }
+      } catch (error) {
+        console.error("Admin check failed:", error);
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to access the admin dashboard.",
+          variant: "destructive"
+        });
+        navigate('/');
+      }
+    };
+
+    checkIfAdmin();
   }, [user, navigate, toast]);
 
   useEffect(() => {
@@ -203,7 +233,7 @@ const Admin = () => {
     setTimeout(() => {
       toast({
         title: "Data Refreshed",
-        description: "Order data has been updated."
+        description: "All data has been updated."
       });
       setIsRefreshing(false);
     }, 1000);
@@ -232,6 +262,10 @@ const Admin = () => {
     }
   };
 
+  if (!isAdmin) {
+    return null; // Don't render anything while checking admin status
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
@@ -240,9 +274,9 @@ const Admin = () => {
           <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
             <div>
               <h1 className="text-3xl font-extrabold text-gray-900">Admin Dashboard</h1>
-              <p className="mt-1 text-gray-600">Manage recycling orders and track performance</p>
+              <p className="mt-1 text-gray-600">Manage recycling orders, users, and track performance</p>
             </div>
-            <div className="flex gap-2 mt-4 sm:mt-0">
+            <div className="flex flex-wrap gap-2 mt-4 sm:mt-0">
               <Button 
                 onClick={() => setActiveTab('dashboard')}
                 variant={activeTab === 'dashboard' ? "default" : "outline"}
@@ -263,6 +297,13 @@ const Admin = () => {
               >
                 <Gift className="h-4 w-4 mr-2" />
                 Rewards
+              </Button>
+              <Button 
+                onClick={() => setActiveTab('users')}
+                variant={activeTab === 'users' ? "default" : "outline"}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Users
               </Button>
               <Button 
                 onClick={handleRefresh}
@@ -488,6 +529,11 @@ const Admin = () => {
           {/* Rewards Management */}
           {activeTab === 'rewards' && (
             <RewardsManager />
+          )}
+
+          {/* Users Management */}
+          {activeTab === 'users' && (
+            <UsersManager />
           )}
         </div>
       </main>
