@@ -21,6 +21,7 @@ const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: Mobil
       if (!user) return;
       
       try {
+        // First try direct ID match
         const { data, error } = await supabase
           .from('admins')
           .select('id')
@@ -28,6 +29,7 @@ const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: Mobil
           .maybeSingle();
           
         if (data) {
+          console.log("User is admin by ID:", user.email);
           setIsAdmin(true);
         } else {
           // Try checking by email as fallback
@@ -38,7 +40,7 @@ const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: Mobil
             .maybeSingle();
             
           if (emailCheck) {
-            console.log("User is admin (by email):", emailCheck);
+            console.log("User is admin by email:", emailCheck);
             // Update admin record with correct ID
             await supabase
               .from('admins')

@@ -9,6 +9,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { signIn } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();

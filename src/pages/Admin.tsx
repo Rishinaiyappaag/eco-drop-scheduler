@@ -63,6 +63,7 @@ import {
   ResponsiveContainer
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 
 // Define types for the data
 interface Order {
@@ -97,6 +98,9 @@ interface ChartData {
     value: number;
   }[];
 }
+
+// Define a proper profile type for type safety
+type Profile = Tables<'profiles'>;
 
 type OrderStatus = "Pending" | "Processing" | "Completed" | "Cancelled";
 
@@ -255,7 +259,7 @@ const Admin = () => {
           address,
           phone,
           description,
-          profiles:user_id(first_name, last_name, email, reward_points)
+          profiles(first_name, last_name, email, reward_points)
         `)
         .order('created_at', { ascending: false });
 
@@ -266,7 +270,14 @@ const Admin = () => {
 
       if (data) {
         const mappedOrders: Order[] = data.map(order => {
-          const profile = order.profiles || {};
+          // Ensure profiles is treated as an object with the expected properties
+          const profile = order.profiles as unknown as Profile || { 
+            first_name: "Unknown", 
+            last_name: "User", 
+            email: "No email", 
+            reward_points: 0 
+          };
+          
           return {
             id: order.id,
             user_id: order.user_id,
