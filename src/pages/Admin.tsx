@@ -104,6 +104,26 @@ type Profile = Tables<'profiles'>;
 
 type OrderStatus = "Pending" | "Processing" | "Completed" | "Cancelled";
 
+// Points awarded for different device types
+const POINTS_BY_DEVICE_TYPE: Record<string, number> = {
+  "Smartphone": 100,
+  "Laptop": 200,
+  "Desktop": 200,
+  "Tablet": 150,
+  "Monitor": 100,
+  "Printer": 120,
+  "TV": 180,
+  "Gaming Console": 150,
+  "Speaker": 80,
+  "Smartwatch": 50,
+  "Camera": 100,
+  "Router": 70,
+  "Other": 50
+};
+
+// Default points if device type doesn't match any in our map
+const DEFAULT_POINTS = 100;
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 const Admin = () => {
@@ -465,9 +485,49 @@ const Admin = () => {
     }
   };
 
+  // Calculate points based on waste type
+  const calculatePoints = (wasteType: string): number => {
+    const type = wasteType.trim();
+    return POINTS_BY_DEVICE_TYPE[type] || DEFAULT_POINTS;
+  };
+
+  // Update order status and award points if completed
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      // Update order status in Supabase
+      // First get the order details
+      const { data: orderData, error: orderError } = await supabase
+        .from('e_waste_requests')
+        .select('user_id, waste_type, status')
+        .eq('id', orderId)
+        .single();
+        
+      if (orderError) throw orderError;
+      
+      // Only award points if going from non-completed to completed status
+      let pointsAwarded = 0;
+      if (newStatus === "Completed" && orderData.status !== "completed") {
+        pointsAwarded = calculatePoints(orderData.waste_type);
+        
+        // Get current user points
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('reward_points')
+          .eq('id', orderData.user_id)
+          .single();
+          
+        if (userError) throw userError;
+        
+        // Update user points
+        const newPoints = (userData.reward_points || 0) + pointsAwarded;
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ reward_points: newPoints })
+          .eq('id', orderData.user_id);
+          
+        if (updateError) throw updateError;
+      }
+      
+      // Update order status
       const { error } = await supabase
         .from('e_waste_requests')
         .update({ status: newStatus.toLowerCase() })
@@ -477,7 +537,9 @@ const Admin = () => {
       
       toast({
         title: "Order Updated",
-        description: `Order status changed to ${newStatus}.`,
+        description: pointsAwarded > 0 
+          ? `Order status changed to ${newStatus}. ${pointsAwarded} points awarded to user.`
+          : `Order status changed to ${newStatus}.`,
       });
       
       // The real-time subscription will automatically update the UI
@@ -646,6 +708,7 @@ const Admin = () => {
             </Card>
           </div>
           
+          {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Activity Chart */}
