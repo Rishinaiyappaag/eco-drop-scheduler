@@ -31,7 +31,8 @@ import {
   Gift,
   Users,
   Trash2,
-  Edit
+  Edit,
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -164,6 +165,11 @@ const Admin = () => {
     const checkIfAdmin = async () => {
       if (!user) {
         console.log("No user detected, redirecting to login");
+        toast({
+          title: "Login Required",
+          description: "Please login to access the admin dashboard",
+          variant: "destructive" 
+        });
         navigate('/login');
         return;
       }
@@ -171,12 +177,14 @@ const Admin = () => {
       console.log("User logged in:", user.email);
 
       try {
+        console.log("Checking if user is admin with ID:", user.id);
+        
         // Check if the user is in the admins table
         const { data, error } = await supabase
           .from('admins')
-          .select('*')
+          .select('id, email')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
         if (error) {
           console.error("Error checking admin status:", error);
@@ -187,13 +195,31 @@ const Admin = () => {
           console.log("User is admin:", data);
           setIsAdmin(true);
         } else {
-          console.log("User is not admin, redirecting to home");
-          toast({
-            title: "Access Denied",
-            description: "You don't have permission to access the admin dashboard.",
-            variant: "destructive"
-          });
-          navigate('/');
+          // Try checking by email as fallback
+          const { data: emailCheck, error: emailError } = await supabase
+            .from('admins')
+            .select('id, email')
+            .eq('email', user.email)
+            .maybeSingle();
+            
+          if (emailCheck) {
+            console.log("User is admin (by email):", emailCheck);
+            // Update admin record with correct ID
+            await supabase
+              .from('admins')
+              .update({ id: user.id })
+              .eq('email', user.email);
+              
+            setIsAdmin(true);
+          } else {
+            console.log("User is not admin, redirecting to home");
+            toast({
+              title: "Access Denied",
+              description: "You don't have permission to access the admin dashboard.",
+              variant: "destructive"
+            });
+            navigate('/');
+          }
         }
       } catch (error) {
         console.error("Admin check failed:", error);
@@ -263,7 +289,34 @@ const Admin = () => {
   };
 
   if (!isAdmin) {
-    return null; // Don't render anything while checking admin status
+    return (
+      <div className="min-h-screen flex flex-col">
+        <NavBar />
+        <div className="flex-grow flex items-center justify-center p-4 pt-20">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center text-amber-600">
+                <AlertTriangle className="mr-2 h-5 w-5" />
+                Access Restricted
+              </CardTitle>
+              <CardDescription>
+                Checking admin privileges...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center py-6">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+              <p className="text-center text-gray-600 mt-4">
+                If you are an admin, you will be redirected to the admin dashboard.
+                Otherwise, you will be redirected to the home page.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (

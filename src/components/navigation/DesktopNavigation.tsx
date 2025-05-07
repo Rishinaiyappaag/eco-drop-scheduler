@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Settings, Gift } from "lucide-react";
+import { LogOut, User, Settings, Gift, Shield } from "lucide-react";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -26,6 +26,31 @@ type Profile = Tables<"profiles">;
 
 const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkIfAdmin = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('admins')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (data) {
+          console.log("User is admin:", user.email);
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    
+    checkIfAdmin();
+  }, [user]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -88,6 +113,16 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
           <Link to="/learn" className="px-3 py-2 text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
             Learn
           </Link>
+          
+          {isAdmin && (
+            <Link to="/admin" className="px-3 py-2 text-green-600 dark:text-green-400 hover:text-primary dark:hover:text-primary transition-colors font-medium">
+              <div className="flex items-center">
+                <Shield className="h-4 w-4 mr-1" />
+                Admin
+              </div>
+            </Link>
+          )}
+          
           <Button
             onClick={handleSignOut}
             variant="outline"
@@ -130,6 +165,12 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem onClick={() => window.location.href = '/admin'} className="cursor-pointer text-green-600">
+                  <Shield className="mr-2 h-4 w-4" />
+                  <span>Admin Dashboard</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 dark:text-red-400">
                 <LogOut className="mr-2 h-4 w-4" />

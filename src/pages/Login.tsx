@@ -75,13 +75,49 @@ const Login = () => {
       console.log("Sign in result:", result);
       
       if (result.success) {
+        // Check if this is the admin email for demo purposes
+        if (formData.email === "rishinaiyappaag@gmail.com" || formData.email === "admin@ecodrop.com") {
+          // Ensure user is in the admins table
+          try {
+            const { data: existingAdmin, error: checkError } = await supabase
+              .from('admins')
+              .select('id')
+              .eq('id', result.user?.id)
+              .maybeSingle();
+              
+            console.log("Admin check result:", existingAdmin);
+            
+            // If not in admins table, add them
+            if (!existingAdmin && result.user) {
+              const { data: newAdmin, error: insertError } = await supabase
+                .from('admins')
+                .insert({
+                  id: result.user.id,
+                  email: formData.email,
+                  name: result.user.user_metadata?.first_name 
+                    ? `${result.user.user_metadata.first_name} ${result.user.user_metadata.last_name || ''}`
+                    : 'Admin User'
+                })
+                .select();
+                
+              if (insertError) {
+                console.error("Error adding admin user:", insertError);
+              } else {
+                console.log("Added user to admin table:", newAdmin);
+              }
+            }
+          } catch (adminError) {
+            console.error("Error checking/adding admin:", adminError);
+          }
+        }
+        
         toast({
           title: "Login successful!",
           description: "Welcome back to EcoDrop!",
         });
         
-        // Check if user is admin (email: admin@ecodrop.com) for demo purposes
-        if (formData.email === "admin@ecodrop.com") {
+        // Check if user is admin (specific emails) for demo purposes
+        if (formData.email === "rishinaiyappaag@gmail.com" || formData.email === "admin@ecodrop.com") {
           navigate('/admin');
         } else {
           navigate('/');

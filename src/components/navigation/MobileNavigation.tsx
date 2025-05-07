@@ -1,7 +1,9 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Settings, Gift } from "lucide-react";
+import { LogOut, User, Settings, Gift, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MobileNavigationProps {
   user: any;
@@ -11,6 +13,31 @@ interface MobileNavigationProps {
 }
 
 const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: MobileNavigationProps) => {
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  // Check if user is admin
+  useEffect(() => {
+    const checkIfAdmin = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('admins')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (data) {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+      }
+    };
+    
+    checkIfAdmin();
+  }, [user]);
+  
   if (!isMenuOpen) return null;
 
   return (
@@ -62,6 +89,20 @@ const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: Mobil
             >
               Profile
             </Link>
+            
+            {isAdmin && (
+              <Link 
+                to="/admin" 
+                className="block px-3 py-2 rounded-md text-green-700 dark:text-green-400 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary dark:hover:text-primary font-medium"
+                onClick={toggleMenu}
+              >
+                <div className="flex items-center">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Dashboard
+                </div>
+              </Link>
+            )}
+            
             <button 
               onClick={handleSignOut}
               className="w-full mt-2 flex items-center px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary dark:hover:text-primary"
