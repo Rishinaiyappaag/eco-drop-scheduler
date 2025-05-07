@@ -29,6 +29,24 @@ const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: Mobil
           
         if (data) {
           setIsAdmin(true);
+        } else {
+          // Try checking by email as fallback
+          const { data: emailCheck, error: emailError } = await supabase
+            .from('admins')
+            .select('id, email')
+            .eq('email', user.email)
+            .maybeSingle();
+            
+          if (emailCheck) {
+            console.log("User is admin (by email):", emailCheck);
+            // Update admin record with correct ID
+            await supabase
+              .from('admins')
+              .update({ id: user.id })
+              .eq('email', user.email);
+              
+            setIsAdmin(true);
+          }
         }
       } catch (error) {
         console.error("Error checking admin status:", error);

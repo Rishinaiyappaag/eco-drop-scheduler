@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
@@ -63,86 +64,47 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 
-// Sample orders data for demonstration
-const sampleOrders = [
-  {
-    id: "ECO-1001",
-    customer: "Alice Johnson",
-    email: "alice@example.com",
-    date: "2025-04-01",
-    items: "Laptop, Smartphone",
-    type: "Pickup",
-    status: "Completed",
-    points: 150
-  },
-  {
-    id: "ECO-1002",
-    customer: "Bob Smith",
-    email: "bob@example.com",
-    date: "2025-04-02",
-    items: "Desktop Computer, Monitor",
-    type: "Drop-off",
-    status: "Pending",
-    points: 200
-  },
-  {
-    id: "ECO-1003",
-    customer: "Carol Davis",
-    email: "carol@example.com",
-    date: "2025-04-03",
-    items: "Printer, Scanner",
-    type: "Pickup",
-    status: "Processing",
-    points: 120
-  },
-  {
-    id: "ECO-1004",
-    customer: "David Wilson",
-    email: "david@example.com",
-    date: "2025-03-30",
-    items: "Tablet, Headphones",
-    type: "Drop-off",
-    status: "Completed",
-    points: 100
-  },
-  {
-    id: "ECO-1005",
-    customer: "Eva Martinez",
-    email: "eva@example.com",
-    date: "2025-03-29",
-    items: "Router, External Hard Drive",
-    type: "Pickup",
-    status: "Cancelled",
-    points: 0
-  }
-];
+// Define types for the data
+interface Order {
+  id: string;
+  customer: string;
+  email: string;
+  date: string;
+  items: string;
+  type: string;
+  status: string;
+  points: number;
+  user_id?: string;
+}
 
-// Sample data for charts
-const activityData = [
-  { name: 'Jan', pickups: 40, dropoffs: 24 },
-  { name: 'Feb', pickups: 30, dropoffs: 13 },
-  { name: 'Mar', pickups: 20, dropoffs: 38 },
-  { name: 'Apr', pickups: 27, dropoffs: 39 },
-  { name: 'May', pickups: 18, dropoffs: 48 },
-  { name: 'Jun', pickups: 23, dropoffs: 38 },
-  { name: 'Jul', pickups: 34, dropoffs: 43 },
-];
+interface Stats {
+  totalOrders: number;
+  completedOrders: number;
+  pendingOrders: number;
+  totalPoints: number;
+  pickupOrders: number;
+  dropOffOrders: number;
+}
 
-const deviceTypeData = [
-  { name: 'Smartphones', value: 350 },
-  { name: 'Laptops', value: 300 },
-  { name: 'Tablets', value: 200 },
-  { name: 'Desktops', value: 150 },
-  { name: 'Printers', value: 100 },
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+interface ChartData {
+  activityData: {
+    name: string;
+    pickups: number;
+    dropoffs: number;
+  }[];
+  deviceTypeData: {
+    name: string;
+    value: number;
+  }[];
+}
 
 type OrderStatus = "Pending" | "Processing" | "Completed" | "Cancelled";
 
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
 const Admin = () => {
-  const [orders, setOrders] = useState(sampleOrders);
-  const [filteredOrders, setFilteredOrders] = useState(sampleOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'rewards' | 'users'>('dashboard');
@@ -150,15 +112,18 @@ const Admin = () => {
   const navigate = useNavigate();
   const { user } = useSupabase();
   const [isAdmin, setIsAdmin] = useState(false);
-
-  // Stats calculation
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter(order => order.status === "Completed").length;
-  const pendingOrders = orders.filter(order => order.status === "Pending").length;
-  const totalPoints = orders.reduce((sum, order) => sum + order.points, 0);
-  
-  const pickupOrders = orders.filter(order => order.type === "Pickup").length;
-  const dropOffOrders = orders.filter(order => order.type === "Drop-off").length;
+  const [stats, setStats] = useState<Stats>({
+    totalOrders: 0,
+    completedOrders: 0,
+    pendingOrders: 0,
+    totalPoints: 0,
+    pickupOrders: 0,
+    dropOffOrders: 0
+  });
+  const [chartData, setChartData] = useState<ChartData>({
+    activityData: [],
+    deviceTypeData: []
+  });
 
   // Check if user is admin
   useEffect(() => {
@@ -194,6 +159,9 @@ const Admin = () => {
         if (data) {
           console.log("User is admin:", data);
           setIsAdmin(true);
+          fetchOrders();
+          fetchStats();
+          fetchChartData();
         } else {
           // Try checking by email as fallback
           const { data: emailCheck, error: emailError } = await supabase
@@ -211,6 +179,9 @@ const Admin = () => {
               .eq('email', user.email);
               
             setIsAdmin(true);
+            fetchOrders();
+            fetchStats();
+            fetchChartData();
           } else {
             console.log("User is not admin, redirecting to home");
             toast({
@@ -235,6 +206,211 @@ const Admin = () => {
     checkIfAdmin();
   }, [user, navigate, toast]);
 
+  // Set up real-time updates
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    // Subscribe to e_waste_requests changes
+    const channel = supabase
+      .channel('admin-dashboard-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'e_waste_requests' }, 
+        () => {
+          console.log("Received real-time update for e_waste_requests");
+          fetchOrders();
+          fetchStats();
+          fetchChartData();
+        }
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' }, 
+        () => {
+          console.log("Received real-time update for profiles");
+          fetchOrders();
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin]);
+
+  // Fetch orders from Supabase
+  const fetchOrders = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      // Fetch e-waste requests joined with profiles
+      const { data, error } = await supabase
+        .from('e_waste_requests')
+        .select(`
+          id,
+          user_id,
+          pickup_time,
+          created_at,
+          waste_type,
+          status,
+          address,
+          phone,
+          description,
+          profiles:user_id(first_name, last_name, email, reward_points)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching orders:", error);
+        throw error;
+      }
+
+      if (data) {
+        const mappedOrders: Order[] = data.map(order => {
+          const profile = order.profiles || {};
+          return {
+            id: order.id,
+            user_id: order.user_id,
+            customer: profile.first_name && profile.last_name 
+              ? `${profile.first_name} ${profile.last_name}` 
+              : "Unknown User",
+            email: profile.email || "No email",
+            date: new Date(order.created_at).toLocaleDateString(),
+            items: order.waste_type || "Unknown",
+            type: order.address.includes('Drop-off') ? "Drop-off" : "Pickup",
+            status: (order.status as string).charAt(0).toUpperCase() + (order.status as string).slice(1),
+            points: profile.reward_points || 0
+          };
+        });
+
+        console.log("Fetched orders:", mappedOrders);
+        setOrders(mappedOrders);
+        setFilteredOrders(mappedOrders);
+      }
+    } catch (error) {
+      console.error("Error in fetchOrders:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load orders. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Calculate and fetch stats
+  const fetchStats = async () => {
+    if (!isAdmin) return;
+    
+    try {
+      // Fetch all e-waste requests
+      const { data, error } = await supabase
+        .from('e_waste_requests')
+        .select('status, address');
+
+      if (error) throw error;
+
+      const stats = {
+        totalOrders: data.length,
+        completedOrders: data.filter(order => order.status.toLowerCase() === 'completed').length,
+        pendingOrders: data.filter(order => order.status.toLowerCase() === 'pending').length,
+        totalPoints: 0, // Will calculate from profiles
+        pickupOrders: data.filter(order => !order.address.includes('Drop-off')).length,
+        dropOffOrders: data.filter(order => order.address.includes('Drop-off')).length
+      };
+
+      // Fetch total reward points
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('reward_points');
+
+      if (!profilesError && profilesData) {
+        stats.totalPoints = profilesData.reduce((sum, profile) => sum + (profile.reward_points || 0), 0);
+      }
+
+      setStats(stats);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
+  // Fetch data for charts
+  const fetchChartData = async () => {
+    if (!isAdmin) return;
+
+    try {
+      // For activity chart - group by month
+      const { data, error } = await supabase
+        .from('e_waste_requests')
+        .select('created_at, address')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Process data for monthly chart
+      const monthlyData = processMonthlyData(data);
+      
+      // Process data for device types
+      const { data: wasteTypeData, error: wasteTypeError } = await supabase
+        .from('e_waste_requests')
+        .select('waste_type');
+
+      if (wasteTypeError) throw wasteTypeError;
+
+      const deviceTypes = processWasteTypeData(wasteTypeData);
+
+      setChartData({
+        activityData: monthlyData,
+        deviceTypeData: deviceTypes
+      });
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+    }
+  };
+
+  // Process monthly data for charts
+  const processMonthlyData = (data: any[]) => {
+    const months: Record<string, { pickups: number, dropoffs: number }> = {};
+    
+    data.forEach(item => {
+      const date = new Date(item.created_at);
+      const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+      
+      if (!months[monthYear]) {
+        months[monthYear] = { pickups: 0, dropoffs: 0 };
+      }
+      
+      if (item.address.includes('Drop-off')) {
+        months[monthYear].dropoffs += 1;
+      } else {
+        months[monthYear].pickups += 1;
+      }
+    });
+    
+    // Convert to array format for chart
+    return Object.keys(months).map(month => ({
+      name: month,
+      pickups: months[month].pickups,
+      dropoffs: months[month].dropoffs
+    }));
+  };
+
+  // Process waste type data for charts
+  const processWasteTypeData = (data: any[]) => {
+    const types: Record<string, number> = {};
+    
+    data.forEach(item => {
+      const type = item.waste_type || 'Unknown';
+      if (!types[type]) {
+        types[type] = 0;
+      }
+      types[type] += 1;
+    });
+    
+    return Object.keys(types).map(type => ({
+      name: type,
+      value: types[type]
+    }));
+  };
+
   useEffect(() => {
     // Filter orders based on search term
     if (searchTerm.trim() === "") {
@@ -253,29 +429,55 @@ const Admin = () => {
     }
   }, [searchTerm, orders]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate data refresh
-    setTimeout(() => {
+    
+    try {
+      await Promise.all([
+        fetchOrders(),
+        fetchStats(),
+        fetchChartData()
+      ]);
+      
       toast({
         title: "Data Refreshed",
         description: "All data has been updated."
       });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast({
+        title: "Refresh Failed",
+        description: "Could not refresh data. Please try again."
+      });
+    } finally {
       setIsRefreshing(false);
-    }, 1000);
+    }
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
-    // Update order status
-    const updatedOrders = orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    setOrders(updatedOrders);
-    
-    toast({
-      title: "Order Updated",
-      description: `Order ${orderId} status changed to ${newStatus}.`,
-    });
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      // Update order status in Supabase
+      const { error } = await supabase
+        .from('e_waste_requests')
+        .update({ status: newStatus.toLowerCase() })
+        .eq('id', orderId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Order Updated",
+        description: `Order status changed to ${newStatus}.`,
+      });
+      
+      // The real-time subscription will automatically update the UI
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Could not update order status.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -377,11 +579,11 @@ const Admin = () => {
                 <CardDescription>All time</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{totalOrders}</p>
+                <p className="text-3xl font-bold">{stats.totalOrders}</p>
                 <div className="flex items-center mt-2 text-sm">
                   <Activity className="h-4 w-4 mr-1 text-primary" />
                   <span className="text-gray-600">
-                    {pickupOrders} Pickups, {dropOffOrders} Drop-offs
+                    {stats.pickupOrders} Pickups, {stats.dropOffOrders} Drop-offs
                   </span>
                 </div>
               </CardContent>
@@ -393,9 +595,11 @@ const Admin = () => {
                 <CardDescription>Successfully recycled</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-green-600">{completedOrders}</p>
+                <p className="text-3xl font-bold text-green-600">{stats.completedOrders}</p>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-green-600 h-2.5 rounded-full" style={{ width: `${(completedOrders / totalOrders) * 100}%` }}></div>
+                  <div className="bg-green-600 h-2.5 rounded-full" style={{ 
+                    width: stats.totalOrders > 0 ? `${(stats.completedOrders / stats.totalOrders) * 100}%` : '0%'
+                  }}></div>
                 </div>
               </CardContent>
             </Card>
@@ -406,9 +610,11 @@ const Admin = () => {
                 <CardDescription>Awaiting processing</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-yellow-600">{pendingOrders}</p>
+                <p className="text-3xl font-bold text-yellow-600">{stats.pendingOrders}</p>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-yellow-500 h-2.5 rounded-full" style={{ width: `${(pendingOrders / totalOrders) * 100}%` }}></div>
+                  <div className="bg-yellow-500 h-2.5 rounded-full" style={{ 
+                    width: stats.totalOrders > 0 ? `${(stats.pendingOrders / stats.totalOrders) * 100}%` : '0%'
+                  }}></div>
                 </div>
               </CardContent>
             </Card>
@@ -419,10 +625,10 @@ const Admin = () => {
                 <CardDescription>Reward points issued</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-primary">{totalPoints}</p>
+                <p className="text-3xl font-bold text-primary">{stats.totalPoints}</p>
                 <div className="flex items-center mt-2 text-sm">
                   <span className="text-gray-600">
-                    Avg: {Math.round(totalPoints / totalOrders)} per order
+                    Avg: {stats.totalOrders > 0 ? Math.round(stats.totalPoints / stats.totalOrders) : 0} per order
                   </span>
                 </div>
               </CardContent>
@@ -438,20 +644,26 @@ const Admin = () => {
                   <CardDescription>Pickup vs Drop-off trends</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={activityData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="pickups" fill="#0088FE" name="Pickups" />
-                      <Bar dataKey="dropoffs" fill="#00C49F" name="Drop-offs" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {chartData.activityData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartData.activityData}
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="pickups" fill="#0088FE" name="Pickups" />
+                        <Bar dataKey="dropoffs" fill="#00C49F" name="Drop-offs" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-gray-500">No activity data available</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
                 
@@ -462,26 +674,32 @@ const Admin = () => {
                   <CardDescription>Distribution of recycled electronics</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={deviceTypeData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {deviceTypeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [`${value} units`, 'Quantity']} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {chartData.deviceTypeData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData.deviceTypeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {chartData.deviceTypeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value} units`, 'Quantity']} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-gray-500">No device type data available</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -524,7 +742,7 @@ const Admin = () => {
                       {filteredOrders.length > 0 ? (
                         filteredOrders.map((order) => (
                           <TableRow key={order.id}>
-                            <TableCell className="font-medium">{order.id}</TableCell>
+                            <TableCell className="font-medium">{order.id.slice(0, 8)}</TableCell>
                             <TableCell>
                               <div>{order.customer}</div>
                               <div className="text-sm text-gray-500">{order.email}</div>
@@ -568,7 +786,7 @@ const Admin = () => {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-6 text-gray-500">
-                            No orders found matching your search.
+                            {orders.length === 0 ? "No orders found in the database." : "No orders found matching your search."}
                           </TableCell>
                         </TableRow>
                       )}
