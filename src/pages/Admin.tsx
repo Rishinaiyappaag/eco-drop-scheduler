@@ -76,6 +76,9 @@ interface Order {
   status: string;
   points: number;
   user_id?: string;
+  phone: string;
+  address: string;
+  description: string;
 }
 
 interface Stats {
@@ -102,27 +105,22 @@ interface ChartData {
 // Define a proper profile type for type safety
 type Profile = Tables<'profiles'>;
 
-type OrderStatus = "Pending" | "Processing" | "Completed" | "Cancelled";
+type OrderStatus = "pending" | "processing" | "completed" | "cancelled";
 
-// Points awarded for different device types
-const POINTS_BY_DEVICE_TYPE: Record<string, number> = {
-  "Smartphone": 100,
-  "Laptop": 200,
-  "Desktop": 200,
-  "Tablet": 150,
-  "Monitor": 100,
-  "Printer": 120,
-  "TV": 180,
-  "Gaming Console": 150,
-  "Speaker": 80,
-  "Smartwatch": 50,
-  "Camera": 100,
-  "Router": 70,
-  "Other": 50
+// Points awarded for different waste types (matching the form)
+const POINTS_BY_WASTE_TYPE: Record<string, number> = {
+  "computers": 50,
+  "phones": 25,
+  "tvs": 40,
+  "printers": 30,
+  "batteries": 10,
+  "cables": 5,
+  "appliances": 20,
+  "other": 15
 };
 
-// Default points if device type doesn't match any in our map
-const DEFAULT_POINTS = 100;
+// Default points if waste type doesn't match any in our map
+const DEFAULT_POINTS = 15;
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -234,13 +232,15 @@ const Admin = () => {
   useEffect(() => {
     if (!isAdmin) return;
 
+    console.log("Setting up real-time subscriptions for admin dashboard");
+
     // Subscribe to e_waste_requests changes
     const channel = supabase
       .channel('admin-dashboard-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'e_waste_requests' }, 
-        () => {
-          console.log("Received real-time update for e_waste_requests");
+        (payload) => {
+          console.log("Received real-time update for e_waste_requests:", payload);
           fetchOrders();
           fetchStats();
           fetchChartData();
@@ -248,8 +248,8 @@ const Admin = () => {
       )
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'profiles' }, 
-        () => {
-          console.log("Received real-time update for profiles");
+        (payload) => {
+          console.log("Received real-time update for profiles:", payload);
           fetchOrders();
           fetchStats();
         }
@@ -257,6 +257,7 @@ const Admin = () => {
       .subscribe();
 
     return () => {
+      console.log("Cleaning up real-time subscriptions");
       supabase.removeChannel(channel);
     };
   }, [isAdmin]);
@@ -266,7 +267,9 @@ const Admin = () => {
     if (!isAdmin) return;
     
     try {
-      // Fetch e-waste requests joined with profiles
+      console.log("Fetching orders from database...");
+      
+      // Fetch e-waste requests with profile information
       const { data, error } = await supabase
         .from('e_waste_requests')
         .select(`
@@ -289,31 +292,30 @@ const Admin = () => {
       }
 
       if (data) {
+        console.log("Raw order data:", data);
+        
         const mappedOrders: Order[] = data.map(order => {
-          // Ensure profiles is treated as an object with the expected properties
-          const profile = order.profiles as unknown as Profile || { 
-            first_name: "Unknown", 
-            last_name: "User", 
-            email: "No email", 
-            reward_points: 0 
-          };
+          const profile = order.profiles as unknown as Profile;
           
           return {
             id: order.id,
             user_id: order.user_id,
-            customer: profile.first_name && profile.last_name 
+            customer: profile && profile.first_name && profile.last_name 
               ? `${profile.first_name} ${profile.last_name}` 
-              : "Unknown User",
-            email: profile.email || "No email",
+              : order.user_id ? "Registered User" : "Guest User",
+            email: profile?.email || "No email",
             date: new Date(order.created_at).toLocaleDateString(),
             items: order.waste_type || "Unknown",
-            type: order.address.includes('Drop-off') ? "Drop-off" : "Pickup",
-            status: (order.status as string).charAt(0).toUpperCase() + (order.status as string).slice(1),
-            points: profile.reward_points || 0
+            type: order.address && order.address.includes('Drop-off') ? "Drop-off" : "Pickup",
+            status: order.status || "pending",
+            points: profile?.reward_points || 0,
+            phone: order.phone || "No phone",
+            address: order.address || "No address",
+            description: order.description || "No description"
           };
         });
 
-        console.log("Fetched orders:", mappedOrders);
+        console.log("Mapped orders:", mappedOrders);
         setOrders(mappedOrders);
         setFilteredOrders(mappedOrders);
       }
@@ -332,6 +334,8 @@ const Admin = () => {
     if (!isAdmin) return;
     
     try {
+      console.log("Fetching stats from database...");
+      
       // Fetch all e-waste requests
       const { data, error } = await supabase
         .from('e_waste_requests')
@@ -357,6 +361,7 @@ const Admin = () => {
         stats.totalPoints = profilesData.reduce((sum, profile) => sum + (profile.reward_points || 0), 0);
       }
 
+      console.log("Calculated stats:", stats);
       setStats(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -368,6 +373,8 @@ const Admin = () => {
     if (!isAdmin) return;
 
     try {
+      console.log("Fetching chart data from database...");
+      
       // For activity chart - group by month
       const { data, error } = await supabase
         .from('e_waste_requests')
@@ -388,6 +395,7 @@ const Admin = () => {
 
       const deviceTypes = processWasteTypeData(wasteTypeData);
 
+      console.log("Chart data processed:", { monthlyData, deviceTypes });
       setChartData({
         activityData: monthlyData,
         deviceTypeData: deviceTypes
@@ -409,7 +417,7 @@ const Admin = () => {
         months[monthYear] = { pickups: 0, dropoffs: 0 };
       }
       
-      if (item.address.includes('Drop-off')) {
+      if (item.address && item.address.includes('Drop-off')) {
         months[monthYear].dropoffs += 1;
       } else {
         months[monthYear].pickups += 1;
@@ -487,13 +495,15 @@ const Admin = () => {
 
   // Calculate points based on waste type
   const calculatePoints = (wasteType: string): number => {
-    const type = wasteType.trim();
-    return POINTS_BY_DEVICE_TYPE[type] || DEFAULT_POINTS;
+    const type = wasteType.toLowerCase().trim();
+    return POINTS_BY_WASTE_TYPE[type] || DEFAULT_POINTS;
   };
 
   // Update order status and award points if completed
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
+      console.log(`Updating order ${orderId} to status: ${newStatus}`);
+      
       // First get the order details
       const { data: orderData, error: orderError } = await supabase
         .from('e_waste_requests')
@@ -501,12 +511,18 @@ const Admin = () => {
         .eq('id', orderId)
         .single();
         
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error("Error fetching order data:", orderError);
+        throw orderError;
+      }
       
-      // Only award points if going from non-completed to completed status
+      console.log("Order data:", orderData);
+      
+      // Only award points if going from non-completed to completed status and user exists
       let pointsAwarded = 0;
-      if (newStatus === "Completed" && orderData.status !== "completed") {
+      if (newStatus === "completed" && orderData.status !== "completed" && orderData.user_id) {
         pointsAwarded = calculatePoints(orderData.waste_type);
+        console.log(`Awarding ${pointsAwarded} points for waste type: ${orderData.waste_type}`);
         
         // Get current user points
         const { data: userData, error: userError } = await supabase
@@ -515,7 +531,12 @@ const Admin = () => {
           .eq('id', orderData.user_id)
           .single();
           
-        if (userError) throw userError;
+        if (userError) {
+          console.error("Error fetching user data:", userError);
+          throw userError;
+        }
+        
+        console.log("Current user points:", userData.reward_points);
         
         // Update user points
         const newPoints = (userData.reward_points || 0) + pointsAwarded;
@@ -524,16 +545,26 @@ const Admin = () => {
           .update({ reward_points: newPoints })
           .eq('id', orderData.user_id);
           
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error("Error updating user points:", updateError);
+          throw updateError;
+        }
+        
+        console.log(`Updated user points to: ${newPoints}`);
       }
       
       // Update order status
       const { error } = await supabase
         .from('e_waste_requests')
-        .update({ status: newStatus.toLowerCase() })
+        .update({ status: newStatus })
         .eq('id', orderId);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating order status:", error);
+        throw error;
+      }
+      
+      console.log(`Order ${orderId} status updated to: ${newStatus}`);
       
       toast({
         title: "Order Updated",
@@ -542,7 +573,9 @@ const Admin = () => {
           : `Order status changed to ${newStatus}.`,
       });
       
-      // The real-time subscription will automatically update the UI
+      // Refresh data to show changes immediately
+      fetchOrders();
+      fetchStats();
     } catch (error: any) {
       console.error("Error updating order status:", error);
       toast({
@@ -554,13 +587,17 @@ const Admin = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch(status) {
-      case "Completed": return "bg-green-100 text-green-800";
-      case "Processing": return "bg-blue-100 text-blue-800";
-      case "Pending": return "bg-yellow-100 text-yellow-800";
-      case "Cancelled": return "bg-red-100 text-red-800";
+    switch(status.toLowerCase()) {
+      case "completed": return "bg-green-100 text-green-800";
+      case "processing": return "bg-blue-100 text-blue-800";
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "cancelled": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   if (!isAdmin) {
@@ -804,11 +841,11 @@ const Admin = () => {
                       <TableRow>
                         <TableHead>Order ID</TableHead>
                         <TableHead>Customer</TableHead>
+                        <TableHead>Contact</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Items</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Points</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -821,6 +858,10 @@ const Admin = () => {
                               <div>{order.customer}</div>
                               <div className="text-sm text-gray-500">{order.email}</div>
                             </TableCell>
+                            <TableCell>
+                              <div className="text-sm">{order.phone}</div>
+                              <div className="text-xs text-gray-500 max-w-xs truncate">{order.address}</div>
+                            </TableCell>
                             <TableCell>{order.date}</TableCell>
                             <TableCell>{order.items}</TableCell>
                             <TableCell>
@@ -830,25 +871,32 @@ const Admin = () => {
                             </TableCell>
                             <TableCell>
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                                {order.status}
+                                {formatStatus(order.status)}
                               </span>
                             </TableCell>
-                            <TableCell>{order.points}</TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => updateOrderStatus(order.id, "Completed")}
-                                  disabled={order.status === "Completed" || order.status === "Cancelled"}
+                                  onClick={() => updateOrderStatus(order.id, "processing")}
+                                  disabled={order.status === "completed" || order.status === "cancelled"}
+                                >
+                                  Process
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => updateOrderStatus(order.id, "completed")}
+                                  disabled={order.status === "completed" || order.status === "cancelled"}
                                 >
                                   Complete
                                 </Button>
                                 <Button 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => updateOrderStatus(order.id, "Cancelled")}
-                                  disabled={order.status === "Cancelled"}
+                                  onClick={() => updateOrderStatus(order.id, "cancelled")}
+                                  disabled={order.status === "cancelled"}
                                   className="text-red-500 hover:text-red-700"
                                 >
                                   Cancel
