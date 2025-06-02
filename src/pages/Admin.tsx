@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
@@ -33,7 +32,9 @@ import {
   Users,
   Trash2,
   Edit,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle,
+  Award
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -105,7 +106,7 @@ interface ChartData {
 // Define a proper profile type for type safety
 type Profile = Tables<'profiles'>;
 
-type OrderStatus = "pending" | "processing" | "completed" | "cancelled";
+type OrderStatus = "pending" | "processing" | "completed" | "cancelled" | "accepted";
 
 // Points awarded for different waste types (matching the form)
 const POINTS_BY_WASTE_TYPE: Record<string, number> = {
@@ -345,7 +346,7 @@ const Admin = () => {
 
       const stats = {
         totalOrders: data.length,
-        completedOrders: data.filter(order => order.status.toLowerCase() === 'completed').length,
+        completedOrders: data.filter(order => order.status.toLowerCase() === 'completed' || order.status.toLowerCase() === 'accepted').length,
         pendingOrders: data.filter(order => order.status.toLowerCase() === 'pending').length,
         totalPoints: 0, // Will calculate from profiles
         pickupOrders: data.filter(order => !order.address.includes('Drop-off')).length,
@@ -499,10 +500,46 @@ const Admin = () => {
     return POINTS_BY_WASTE_TYPE[type] || DEFAULT_POINTS;
   };
 
-  // Update order status and award points if completed
+  // Update order status WITHOUT awarding points
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       console.log(`Updating order ${orderId} to status: ${newStatus}`);
+      
+      // Update order status
+      const { error } = await supabase
+        .from('e_waste_requests')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+        
+      if (error) {
+        console.error("Error updating order status:", error);
+        throw error;
+      }
+      
+      console.log(`Order ${orderId} status updated to: ${newStatus}`);
+      
+      toast({
+        title: "Order Updated",
+        description: `Order status changed to ${newStatus}.`,
+      });
+      
+      // Refresh data to show changes immediately
+      fetchOrders();
+      fetchStats();
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Could not update order status.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Accept order and award points
+  const acceptOrderAndAwardPoints = async (orderId: string) => {
+    try {
+      console.log(`Accepting order ${orderId} and awarding points`);
       
       // First get the order details
       const { data: orderData, error: orderError } = await supabase
@@ -518,9 +555,9 @@ const Admin = () => {
       
       console.log("Order data:", orderData);
       
-      // Only award points if going from non-completed to completed status and user exists
+      // Only award points if user exists
       let pointsAwarded = 0;
-      if (newStatus === "completed" && orderData.status !== "completed" && orderData.user_id) {
+      if (orderData.user_id) {
         pointsAwarded = calculatePoints(orderData.waste_type);
         console.log(`Awarding ${pointsAwarded} points for waste type: ${orderData.waste_type}`);
         
@@ -553,10 +590,10 @@ const Admin = () => {
         console.log(`Updated user points to: ${newPoints}`);
       }
       
-      // Update order status
+      // Update order status to accepted
       const { error } = await supabase
         .from('e_waste_requests')
-        .update({ status: newStatus })
+        .update({ status: 'accepted' })
         .eq('id', orderId);
         
       if (error) {
@@ -564,23 +601,23 @@ const Admin = () => {
         throw error;
       }
       
-      console.log(`Order ${orderId} status updated to: ${newStatus}`);
+      console.log(`Order ${orderId} accepted and points awarded`);
       
       toast({
-        title: "Order Updated",
+        title: "Order Accepted",
         description: pointsAwarded > 0 
-          ? `Order status changed to ${newStatus}. ${pointsAwarded} points awarded to user.`
-          : `Order status changed to ${newStatus}.`,
+          ? `Order accepted successfully! ${pointsAwarded} points awarded to user.`
+          : `Order accepted successfully!`,
       });
       
       // Refresh data to show changes immediately
       fetchOrders();
       fetchStats();
     } catch (error: any) {
-      console.error("Error updating order status:", error);
+      console.error("Error accepting order:", error);
       toast({
-        title: "Update Failed",
-        description: error.message || "Could not update order status.",
+        title: "Accept Failed",
+        description: error.message || "Could not accept order.",
         variant: "destructive"
       });
     }
@@ -588,6 +625,7 @@ const Admin = () => {
 
   const getStatusColor = (status: string) => {
     switch(status.toLowerCase()) {
+      case "accepted": return "bg-green-100 text-green-800";
       case "completed": return "bg-green-100 text-green-800";
       case "processing": return "bg-blue-100 text-blue-800";
       case "pending": return "bg-yellow-100 text-yellow-800";
@@ -875,32 +913,64 @@ const Admin = () => {
                               </span>
                             </TableCell>
                             <TableCell>
-                              <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => updateOrderStatus(order.id, "processing")}
-                                  disabled={order.status === "completed" || order.status === "cancelled"}
-                                >
-                                  Process
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => updateOrderStatus(order.id, "completed")}
-                                  disabled={order.status === "completed" || order.status === "cancelled"}
-                                >
-                                  Complete
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => updateOrderStatus(order.id, "cancelled")}
-                                  disabled={order.status === "cancelled"}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  Cancel
-                                </Button>
+                              <div className="flex flex-wrap gap-1">
+                                {order.status === "pending" && (
+                                  <>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => updateOrderStatus(order.id, "processing")}
+                                    >
+                                      Process
+                                    </Button>
+                                    <Button 
+                                      variant="default" 
+                                      size="sm"
+                                      onClick={() => acceptOrderAndAwardPoints(order.id)}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      <Award className="h-3 w-3 mr-1" />
+                                      Accept & Award
+                                    </Button>
+                                  </>
+                                )}
+                                {order.status === "processing" && (
+                                  <>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => updateOrderStatus(order.id, "completed")}
+                                    >
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Complete
+                                    </Button>
+                                    <Button 
+                                      variant="default" 
+                                      size="sm"
+                                      onClick={() => acceptOrderAndAwardPoints(order.id)}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      <Award className="h-3 w-3 mr-1" />
+                                      Accept & Award
+                                    </Button>
+                                  </>
+                                )}
+                                {(order.status === "pending" || order.status === "processing") && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => updateOrderStatus(order.id, "cancelled")}
+                                    className="text-red-500 hover:text-red-700"
+                                  >
+                                    Cancel
+                                  </Button>
+                                )}
+                                {(order.status === "completed" || order.status === "accepted" || order.status === "cancelled") && (
+                                  <span className="text-sm text-gray-500 py-1 px-2">
+                                    {order.status === "accepted" ? "Order accepted & points awarded" : 
+                                     order.status === "completed" ? "Order completed" : "Order cancelled"}
+                                  </span>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
