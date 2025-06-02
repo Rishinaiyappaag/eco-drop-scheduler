@@ -1,16 +1,8 @@
+
 import { useState, useEffect } from "react";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
-import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { 
   Card,
   CardContent,
@@ -18,116 +10,27 @@ import {
   CardHeader,
   CardTitle 
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Search, 
   RefreshCw, 
-  Activity, 
   ShoppingCart,
   ChartBar,
-  ChartPie,
   Gift,
   Users,
-  Trash2,
-  Edit,
-  AlertTriangle,
-  CheckCircle,
-  Award
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import RewardsManager from "@/components/admin/RewardsManager";
 import UsersManager from "@/components/admin/UsersManager";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from "recharts";
+import AdminStats from "@/components/admin/AdminStats";
+import AdminCharts from "@/components/admin/AdminCharts";
+import OrdersTable from "@/components/admin/OrdersTable";
+import { useAdminData } from "@/hooks/useAdminData";
 import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
-
-// Define types for the data
-interface Order {
-  id: string;
-  customer: string;
-  email: string;
-  date: string;
-  items: string;
-  type: string;
-  status: string;
-  points: number;
-  user_id?: string;
-  phone: string;
-  address: string;
-  description: string;
-}
-
-interface Stats {
-  totalOrders: number;
-  completedOrders: number;
-  pendingOrders: number;
-  totalPoints: number;
-  pickupOrders: number;
-  dropOffOrders: number;
-}
-
-interface ChartData {
-  activityData: {
-    name: string;
-    pickups: number;
-    dropoffs: number;
-  }[];
-  deviceTypeData: {
-    name: string;
-    value: number;
-  }[];
-}
-
-// Define a proper profile type for type safety
-type Profile = Tables<'profiles'>;
-
-type OrderStatus = "pending" | "processing" | "completed" | "cancelled" | "accepted";
-
-// Points awarded for different waste types (matching the form)
-const POINTS_BY_WASTE_TYPE: Record<string, number> = {
-  "computers": 50,
-  "phones": 25,
-  "tvs": 40,
-  "printers": 30,
-  "batteries": 10,
-  "cables": 5,
-  "appliances": 20,
-  "other": 15
-};
-
-// Default points if waste type doesn't match any in our map
-const DEFAULT_POINTS = 15;
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 const Admin = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'rewards' | 'users'>('dashboard');
@@ -135,18 +38,15 @@ const Admin = () => {
   const navigate = useNavigate();
   const { user } = useSupabase();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [stats, setStats] = useState<Stats>({
-    totalOrders: 0,
-    completedOrders: 0,
-    pendingOrders: 0,
-    totalPoints: 0,
-    pickupOrders: 0,
-    dropOffOrders: 0
-  });
-  const [chartData, setChartData] = useState<ChartData>({
-    activityData: [],
-    deviceTypeData: []
-  });
+
+  const { 
+    orders, 
+    stats, 
+    chartData, 
+    updateOrderStatus, 
+    acceptOrderAndAwardPoints, 
+    refreshAll 
+  } = useAdminData(isAdmin);
 
   // Check if user is admin
   useEffect(() => {
@@ -162,31 +62,19 @@ const Admin = () => {
         return;
       }
 
-      console.log("User logged in:", user.email);
-
       try {
-        console.log("Checking if user is admin with ID:", user.id);
-        
-        // Check if the user is in the admins table
         const { data, error } = await supabase
           .from('admins')
           .select('id, email')
           .eq('id', user.id)
           .maybeSingle();
         
-        if (error) {
-          console.error("Error checking admin status:", error);
-          throw error;
-        }
+        if (error) throw error;
         
         if (data) {
-          console.log("User is admin:", data);
           setIsAdmin(true);
-          fetchOrders();
-          fetchStats();
-          fetchChartData();
+          refreshAll();
         } else {
-          // Try checking by email as fallback
           const { data: emailCheck, error: emailError } = await supabase
             .from('admins')
             .select('id, email')
@@ -194,19 +82,14 @@ const Admin = () => {
             .maybeSingle();
             
           if (emailCheck) {
-            console.log("User is admin (by email):", emailCheck);
-            // Update admin record with correct ID
             await supabase
               .from('admins')
               .update({ id: user.id })
               .eq('email', user.email);
               
             setIsAdmin(true);
-            fetchOrders();
-            fetchStats();
-            fetchChartData();
+            refreshAll();
           } else {
-            console.log("User is not admin, redirecting to home");
             toast({
               title: "Access Denied",
               description: "You don't have permission to access the admin dashboard.",
@@ -227,229 +110,28 @@ const Admin = () => {
     };
 
     checkIfAdmin();
-  }, [user, navigate, toast]);
+  }, [user, navigate, toast, refreshAll]);
 
   // Set up real-time updates
   useEffect(() => {
     if (!isAdmin) return;
 
-    console.log("Setting up real-time subscriptions for admin dashboard");
-
-    // Subscribe to e_waste_requests changes
     const channel = supabase
       .channel('admin-dashboard-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'e_waste_requests' }, 
-        (payload) => {
-          console.log("Received real-time update for e_waste_requests:", payload);
-          fetchOrders();
-          fetchStats();
-          fetchChartData();
-        }
+        () => refreshAll()
       )
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'profiles' }, 
-        (payload) => {
-          console.log("Received real-time update for profiles:", payload);
-          fetchOrders();
-          fetchStats();
-        }
+        () => refreshAll()
       )
       .subscribe();
 
     return () => {
-      console.log("Cleaning up real-time subscriptions");
       supabase.removeChannel(channel);
     };
-  }, [isAdmin]);
-
-  // Fetch orders from Supabase
-  const fetchOrders = async () => {
-    if (!isAdmin) return;
-    
-    try {
-      console.log("Fetching orders from database...");
-      
-      // Fetch e-waste requests with profile information
-      const { data, error } = await supabase
-        .from('e_waste_requests')
-        .select(`
-          id,
-          user_id,
-          pickup_time,
-          created_at,
-          waste_type,
-          status,
-          address,
-          phone,
-          description,
-          profiles(first_name, last_name, email, reward_points)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("Error fetching orders:", error);
-        throw error;
-      }
-
-      if (data) {
-        console.log("Raw order data:", data);
-        
-        const mappedOrders: Order[] = data.map(order => {
-          const profile = order.profiles as unknown as Profile;
-          
-          return {
-            id: order.id,
-            user_id: order.user_id,
-            customer: profile && profile.first_name && profile.last_name 
-              ? `${profile.first_name} ${profile.last_name}` 
-              : order.user_id ? "Registered User" : "Guest User",
-            email: profile?.email || "No email",
-            date: new Date(order.created_at).toLocaleDateString(),
-            items: order.waste_type || "Unknown",
-            type: order.address && order.address.includes('Drop-off') ? "Drop-off" : "Pickup",
-            status: order.status || "pending",
-            points: profile?.reward_points || 0,
-            phone: order.phone || "No phone",
-            address: order.address || "No address",
-            description: order.description || "No description"
-          };
-        });
-
-        console.log("Mapped orders:", mappedOrders);
-        setOrders(mappedOrders);
-        setFilteredOrders(mappedOrders);
-      }
-    } catch (error) {
-      console.error("Error in fetchOrders:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load orders. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Calculate and fetch stats
-  const fetchStats = async () => {
-    if (!isAdmin) return;
-    
-    try {
-      console.log("Fetching stats from database...");
-      
-      // Fetch all e-waste requests
-      const { data, error } = await supabase
-        .from('e_waste_requests')
-        .select('status, address');
-
-      if (error) throw error;
-
-      const stats = {
-        totalOrders: data.length,
-        completedOrders: data.filter(order => order.status.toLowerCase() === 'completed' || order.status.toLowerCase() === 'accepted').length,
-        pendingOrders: data.filter(order => order.status.toLowerCase() === 'pending').length,
-        totalPoints: 0, // Will calculate from profiles
-        pickupOrders: data.filter(order => !order.address.includes('Drop-off')).length,
-        dropOffOrders: data.filter(order => order.address.includes('Drop-off')).length
-      };
-
-      // Fetch total reward points
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('reward_points');
-
-      if (!profilesError && profilesData) {
-        stats.totalPoints = profilesData.reduce((sum, profile) => sum + (profile.reward_points || 0), 0);
-      }
-
-      console.log("Calculated stats:", stats);
-      setStats(stats);
-    } catch (error) {
-      console.error("Error fetching stats:", error);
-    }
-  };
-
-  // Fetch data for charts
-  const fetchChartData = async () => {
-    if (!isAdmin) return;
-
-    try {
-      console.log("Fetching chart data from database...");
-      
-      // For activity chart - group by month
-      const { data, error } = await supabase
-        .from('e_waste_requests')
-        .select('created_at, address')
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Process data for monthly chart
-      const monthlyData = processMonthlyData(data);
-      
-      // Process data for device types
-      const { data: wasteTypeData, error: wasteTypeError } = await supabase
-        .from('e_waste_requests')
-        .select('waste_type');
-
-      if (wasteTypeError) throw wasteTypeError;
-
-      const deviceTypes = processWasteTypeData(wasteTypeData);
-
-      console.log("Chart data processed:", { monthlyData, deviceTypes });
-      setChartData({
-        activityData: monthlyData,
-        deviceTypeData: deviceTypes
-      });
-    } catch (error) {
-      console.error("Error fetching chart data:", error);
-    }
-  };
-
-  // Process monthly data for charts
-  const processMonthlyData = (data: any[]) => {
-    const months: Record<string, { pickups: number, dropoffs: number }> = {};
-    
-    data.forEach(item => {
-      const date = new Date(item.created_at);
-      const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
-      
-      if (!months[monthYear]) {
-        months[monthYear] = { pickups: 0, dropoffs: 0 };
-      }
-      
-      if (item.address && item.address.includes('Drop-off')) {
-        months[monthYear].dropoffs += 1;
-      } else {
-        months[monthYear].pickups += 1;
-      }
-    });
-    
-    // Convert to array format for chart
-    return Object.keys(months).map(month => ({
-      name: month,
-      pickups: months[month].pickups,
-      dropoffs: months[month].dropoffs
-    }));
-  };
-
-  // Process waste type data for charts
-  const processWasteTypeData = (data: any[]) => {
-    const types: Record<string, number> = {};
-    
-    data.forEach(item => {
-      const type = item.waste_type || 'Unknown';
-      if (!types[type]) {
-        types[type] = 0;
-      }
-      types[type] += 1;
-    });
-    
-    return Object.keys(types).map(type => ({
-      name: type,
-      value: types[type]
-    }));
-  };
+  }, [isAdmin, refreshAll]);
 
   useEffect(() => {
     // Filter orders based on search term
@@ -473,12 +155,7 @@ const Admin = () => {
     setIsRefreshing(true);
     
     try {
-      await Promise.all([
-        fetchOrders(),
-        fetchStats(),
-        fetchChartData()
-      ]);
-      
+      await refreshAll();
       toast({
         title: "Data Refreshed",
         description: "All data has been updated."
@@ -492,150 +169,6 @@ const Admin = () => {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  // Calculate points based on waste type
-  const calculatePoints = (wasteType: string): number => {
-    const type = wasteType.toLowerCase().trim();
-    return POINTS_BY_WASTE_TYPE[type] || DEFAULT_POINTS;
-  };
-
-  // Update order status WITHOUT awarding points
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
-    try {
-      console.log(`Updating order ${orderId} to status: ${newStatus}`);
-      
-      // Update order status
-      const { error } = await supabase
-        .from('e_waste_requests')
-        .update({ status: newStatus })
-        .eq('id', orderId);
-        
-      if (error) {
-        console.error("Error updating order status:", error);
-        throw error;
-      }
-      
-      console.log(`Order ${orderId} status updated to: ${newStatus}`);
-      
-      toast({
-        title: "Order Updated",
-        description: `Order status changed to ${newStatus}.`,
-      });
-      
-      // Refresh data to show changes immediately
-      fetchOrders();
-      fetchStats();
-    } catch (error: any) {
-      console.error("Error updating order status:", error);
-      toast({
-        title: "Update Failed",
-        description: error.message || "Could not update order status.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Accept order and award points
-  const acceptOrderAndAwardPoints = async (orderId: string) => {
-    try {
-      console.log(`Accepting order ${orderId} and awarding points`);
-      
-      // First get the order details
-      const { data: orderData, error: orderError } = await supabase
-        .from('e_waste_requests')
-        .select('user_id, waste_type, status')
-        .eq('id', orderId)
-        .single();
-        
-      if (orderError) {
-        console.error("Error fetching order data:", orderError);
-        throw orderError;
-      }
-      
-      console.log("Order data:", orderData);
-      
-      // Only award points if user exists
-      let pointsAwarded = 0;
-      if (orderData.user_id) {
-        pointsAwarded = calculatePoints(orderData.waste_type);
-        console.log(`Awarding ${pointsAwarded} points for waste type: ${orderData.waste_type}`);
-        
-        // Get current user points
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('reward_points')
-          .eq('id', orderData.user_id)
-          .single();
-          
-        if (userError) {
-          console.error("Error fetching user data:", userError);
-          throw userError;
-        }
-        
-        console.log("Current user points:", userData.reward_points);
-        
-        // Update user points
-        const newPoints = (userData.reward_points || 0) + pointsAwarded;
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ reward_points: newPoints })
-          .eq('id', orderData.user_id);
-          
-        if (updateError) {
-          console.error("Error updating user points:", updateError);
-          throw updateError;
-        }
-        
-        console.log(`Updated user points to: ${newPoints}`);
-      }
-      
-      // Update order status to accepted
-      const { error } = await supabase
-        .from('e_waste_requests')
-        .update({ status: 'accepted' })
-        .eq('id', orderId);
-        
-      if (error) {
-        console.error("Error updating order status:", error);
-        throw error;
-      }
-      
-      console.log(`Order ${orderId} accepted and points awarded`);
-      
-      toast({
-        title: "Order Accepted",
-        description: pointsAwarded > 0 
-          ? `Order accepted successfully! ${pointsAwarded} points awarded to user.`
-          : `Order accepted successfully!`,
-      });
-      
-      // Refresh data to show changes immediately
-      fetchOrders();
-      fetchStats();
-    } catch (error: any) {
-      console.error("Error accepting order:", error);
-      toast({
-        title: "Accept Failed",
-        description: error.message || "Could not accept order.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch(status.toLowerCase()) {
-      case "accepted": return "bg-green-100 text-green-800";
-      case "completed": return "bg-green-100 text-green-800";
-      case "processing": return "bg-blue-100 text-blue-800";
-      case "pending": return "bg-yellow-100 text-yellow-800";
-      case "cancelled": return "bg-red-100 text-red-800";
-      default: return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const formatStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   if (!isAdmin) {
@@ -719,282 +252,27 @@ const Admin = () => {
             </div>
           </div>
           
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Total Orders</CardTitle>
-                <CardDescription>All time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{stats.totalOrders}</p>
-                <div className="flex items-center mt-2 text-sm">
-                  <Activity className="h-4 w-4 mr-1 text-primary" />
-                  <span className="text-gray-600">
-                    {stats.pickupOrders} Pickups, {stats.dropOffOrders} Drop-offs
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Completed</CardTitle>
-                <CardDescription>Successfully recycled</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-green-600">{stats.completedOrders}</p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-green-600 h-2.5 rounded-full" style={{ 
-                    width: stats.totalOrders > 0 ? `${(stats.completedOrders / stats.totalOrders) * 100}%` : '0%'
-                  }}></div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Pending</CardTitle>
-                <CardDescription>Awaiting processing</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-yellow-600">{stats.pendingOrders}</p>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-yellow-500 h-2.5 rounded-full" style={{ 
-                    width: stats.totalOrders > 0 ? `${(stats.pendingOrders / stats.totalOrders) * 100}%` : '0%'
-                  }}></div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Total Points</CardTitle>
-                <CardDescription>Reward points issued</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-primary">{stats.totalPoints}</p>
-                <div className="flex items-center mt-2 text-sm">
-                  <span className="text-gray-600">
-                    Avg: {stats.totalOrders > 0 ? Math.round(stats.totalPoints / stats.totalOrders) : 0} per order
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <AdminStats stats={stats} />
           
-          {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {/* Activity Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Activity</CardTitle>
-                  <CardDescription>Pickup vs Drop-off trends</CardDescription>
-                </CardHeader>
-                <CardContent className="h-80">
-                  {chartData.activityData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={chartData.activityData}
-                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="pickups" fill="#0088FE" name="Pickups" />
-                        <Bar dataKey="dropoffs" fill="#00C49F" name="Drop-offs" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <p className="text-gray-500">No activity data available</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-                
-              {/* Device Type Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Device Types Recycled</CardTitle>
-                  <CardDescription>Distribution of recycled electronics</CardDescription>
-                </CardHeader>
-                <CardContent className="h-80">
-                  {chartData.deviceTypeData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={chartData.deviceTypeData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {chartData.deviceTypeData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => [`${value} units`, 'Quantity']} />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <p className="text-gray-500">No device type data available</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <AdminCharts chartData={chartData} />
           )}
           
-          {/* Orders Table */}
           {activeTab === 'orders' && (
-            <Card className="shadow-sm">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                  <CardTitle>E-Waste Recycling Orders</CardTitle>
-                  <div className="relative w-full sm:w-64 mt-4 sm:mt-0">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      className="pl-9"
-                      placeholder="Search orders..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableCaption>List of e-waste recycling orders</TableCaption>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order ID</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Items</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOrders.length > 0 ? (
-                        filteredOrders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-medium">{order.id.slice(0, 8)}</TableCell>
-                            <TableCell>
-                              <div>{order.customer}</div>
-                              <div className="text-sm text-gray-500">{order.email}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">{order.phone}</div>
-                              <div className="text-xs text-gray-500 max-w-xs truncate">{order.address}</div>
-                            </TableCell>
-                            <TableCell>{order.date}</TableCell>
-                            <TableCell>{order.items}</TableCell>
-                            <TableCell>
-                              <Badge variant={order.type === "Pickup" ? "default" : "secondary"}>
-                                {order.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                                {formatStatus(order.status)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {order.status === "pending" && (
-                                  <>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => updateOrderStatus(order.id, "processing")}
-                                    >
-                                      Process
-                                    </Button>
-                                    <Button 
-                                      variant="default" 
-                                      size="sm"
-                                      onClick={() => acceptOrderAndAwardPoints(order.id)}
-                                      className="bg-green-600 hover:bg-green-700"
-                                    >
-                                      <Award className="h-3 w-3 mr-1" />
-                                      Accept & Award
-                                    </Button>
-                                  </>
-                                )}
-                                {order.status === "processing" && (
-                                  <>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm"
-                                      onClick={() => updateOrderStatus(order.id, "completed")}
-                                    >
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Complete
-                                    </Button>
-                                    <Button 
-                                      variant="default" 
-                                      size="sm"
-                                      onClick={() => acceptOrderAndAwardPoints(order.id)}
-                                      className="bg-green-600 hover:bg-green-700"
-                                    >
-                                      <Award className="h-3 w-3 mr-1" />
-                                      Accept & Award
-                                    </Button>
-                                  </>
-                                )}
-                                {(order.status === "pending" || order.status === "processing") && (
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => updateOrderStatus(order.id, "cancelled")}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    Cancel
-                                  </Button>
-                                )}
-                                {(order.status === "completed" || order.status === "accepted" || order.status === "cancelled") && (
-                                  <span className="text-sm text-gray-500 py-1 px-2">
-                                    {order.status === "accepted" ? "Order accepted & points awarded" : 
-                                     order.status === "completed" ? "Order completed" : "Order cancelled"}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-6 text-gray-500">
-                            {orders.length === 0 ? "No orders found in the database." : "No orders found matching your search."}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <OrdersTable 
+              orders={orders}
+              filteredOrders={filteredOrders}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              updateOrderStatus={updateOrderStatus}
+              acceptOrderAndAwardPoints={acceptOrderAndAwardPoints}
+            />
           )}
 
-          {/* Rewards Management */}
           {activeTab === 'rewards' && (
             <RewardsManager />
           )}
 
-          {/* Users Management */}
           {activeTab === 'users' && (
             <UsersManager />
           )}
