@@ -73,7 +73,6 @@ const Admin = () => {
         
         if (data) {
           setIsAdmin(true);
-          refreshAll();
         } else {
           const { data: emailCheck, error: emailError } = await supabase
             .from('admins')
@@ -88,7 +87,6 @@ const Admin = () => {
               .eq('email', user.email);
               
             setIsAdmin(true);
-            refreshAll();
           } else {
             toast({
               title: "Access Denied",

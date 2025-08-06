@@ -143,7 +143,7 @@ export const useAdminData = (isAdmin: boolean) => {
           address,
           phone,
           description,
-          profiles(first_name, last_name, email, reward_points)
+          profiles!left(first_name, last_name, email, reward_points)
         `)
         .order('created_at', { ascending: false });
 
@@ -151,6 +151,8 @@ export const useAdminData = (isAdmin: boolean) => {
         console.error("Error fetching orders:", error);
         throw error;
       }
+
+      console.log("Raw orders data:", data);
 
       if (data) {
         const mappedOrders: Order[] = data.map(order => {
@@ -343,6 +345,14 @@ export const useAdminData = (isAdmin: boolean) => {
       fetchChartData()
     ]);
   };
+
+  // Auto-fetch data when admin status is confirmed
+  useEffect(() => {
+    if (isAdmin) {
+      console.log("Admin status confirmed, fetching all data...");
+      refreshAll();
+    }
+  }, [isAdmin]);
 
   return {
     orders,

@@ -77,18 +77,18 @@ export const usePickupFormSubmit = () => {
           throw new Error("Error storing pickup request: " + requestError.message);
         }
         
-        // Update reward points for the user
+        // Ensure profile exists for the user (but don't award points yet)
         try {
-          // Check if the user has a profile before attempting to update points
+          // Check if the user has a profile
           const { data: profileCheck, error: profileCheckError } = await supabase
             .from('profiles')
-            .select('id, reward_points')
+            .select('id')
             .eq('id', user.id)
             .maybeSingle();
             
           console.log("Profile check:", { profileCheck, profileCheckError });
           
-          // If profile doesn't exist, create it
+          // If profile doesn't exist, create it without points (admin will award points when accepting)
           if (!profileCheck && !profileCheckError) {
             const { data: newProfile, error: createProfileError } = await supabase
               .from('profiles')
@@ -97,7 +97,7 @@ export const usePickupFormSubmit = () => {
                 first_name: user.user_metadata?.first_name || data.name.split(' ')[0] || '',
                 last_name: user.user_metadata?.last_name || data.name.split(' ')[1] || '',
                 email: user.email || data.email,
-                reward_points: pointsToAdd
+                reward_points: 0 // Start with 0 points - admin will award when accepting
               })
               .select();
               
@@ -106,25 +106,9 @@ export const usePickupFormSubmit = () => {
             if (createProfileError) {
               console.error("Error creating profile:", createProfileError);
             }
-          } else if (profileCheck) {
-            // Update the existing profile with the new reward points
-            const currentPoints = profileCheck.reward_points || 0;
-            const newPoints = currentPoints + pointsToAdd;
-            
-            const { data: updatedProfile, error: updateError } = await supabase
-              .from('profiles')
-              .update({ reward_points: newPoints })
-              .eq('id', user.id)
-              .select();
-            
-            console.log("Profile update result:", { updatedProfile, updateError });
-            
-            if (updateError) {
-              console.error("Error updating profile:", updateError);
-            }
           }
           
-          // Refresh the profile data in the context after updating points
+          // Refresh the profile data in the context
           await refreshProfile();
         } catch (profileErr) {
           // Log but don't fail the whole operation
@@ -133,7 +117,7 @@ export const usePickupFormSubmit = () => {
         
         toast({
           title: "Pickup Scheduled!",
-          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You earned ${pointsToAdd} reward points!`,
+          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You'll earn ${pointsToAdd} reward points when an admin accepts your request!`,
         });
       } else {
         // For non-authenticated users, we need to store as a guest
