@@ -78,37 +78,35 @@ const Login = () => {
       if (result.success) {
         // Check if this is the admin email for demo purposes
         if (formData.email === "rishinaiyappaag@gmail.com" || formData.email === "admin@ecodrop.com") {
-          // Ensure user is in the admins table
+          // Ensure user has admin role in user_roles table
           try {
-            const { data: existingAdmin, error: checkError } = await supabase
-              .from('admins')
-              .select('id')
-              .eq('id', result.user?.id)
+            const { data: existingRole, error: checkError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', result.user?.id)
+              .eq('role', 'admin')
               .maybeSingle();
               
-            console.log("Admin check result:", existingAdmin);
+            console.log("Admin role check result:", existingRole);
             
-            // If not in admins table, add them
-            if (!existingAdmin && result.user) {
-              const { data: newAdmin, error: insertError } = await supabase
-                .from('admins')
+            // If not in user_roles table with admin role, add them
+            if (!existingRole && result.user) {
+              const { data: newRole, error: insertError } = await supabase
+                .from('user_roles')
                 .insert({
-                  id: result.user.id,
-                  email: formData.email,
-                  name: result.user.user_metadata?.first_name 
-                    ? `${result.user.user_metadata.first_name} ${result.user.user_metadata.last_name || ''}`
-                    : 'Admin User'
+                  user_id: result.user.id,
+                  role: 'admin'
                 })
                 .select();
                 
               if (insertError) {
-                console.error("Error adding admin user:", insertError);
+                console.error("Error adding admin role:", insertError);
               } else {
-                console.log("Added user to admin table:", newAdmin);
+                console.log("Added admin role for user:", newRole);
               }
             }
           } catch (adminError) {
-            console.error("Error checking/adding admin:", adminError);
+            console.error("Error checking/adding admin role:", adminError);
           }
         }
         

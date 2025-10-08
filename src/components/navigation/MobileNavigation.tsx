@@ -15,40 +15,22 @@ interface MobileNavigationProps {
 const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: MobileNavigationProps) => {
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Check if user is admin
+  // Check if user is admin using user_roles
   useEffect(() => {
     const checkIfAdmin = async () => {
       if (!user) return;
       
       try {
-        // First try direct ID match
         const { data, error } = await supabase
-          .from('admins')
-          .select('id')
-          .eq('id', user.id)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
           .maybeSingle();
           
         if (data) {
-          console.log("User is admin by ID:", user.email);
+          console.log("User is admin:", user.email);
           setIsAdmin(true);
-        } else {
-          // Try checking by email as fallback
-          const { data: emailCheck, error: emailError } = await supabase
-            .from('admins')
-            .select('id, email')
-            .eq('email', user.email)
-            .maybeSingle();
-            
-          if (emailCheck) {
-            console.log("User is admin by email:", emailCheck);
-            // Update admin record with correct ID
-            await supabase
-              .from('admins')
-              .update({ id: user.id })
-              .eq('email', user.email);
-              
-            setIsAdmin(true);
-          }
         }
       } catch (error) {
         console.error("Error checking admin status:", error);

@@ -38,7 +38,7 @@ interface Order {
   description: string;
 }
 
-type OrderStatus = "pending" | "processing" | "completed" | "cancelled" | "accepted";
+type OrderStatus = "pending" | "completed" | "cancelled" | "accepted";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -61,7 +61,6 @@ const OrdersTable = ({
     switch(status.toLowerCase()) {
       case "accepted": return "bg-green-100 text-green-800";
       case "completed": return "bg-green-100 text-green-800";
-      case "processing": return "bg-blue-100 text-blue-800";
       case "pending": return "bg-yellow-100 text-yellow-800";
       case "cancelled": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
@@ -134,13 +133,6 @@ const OrdersTable = ({
                         {order.status === "pending" && (
                           <>
                             <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateOrderStatus(order.id, "processing")}
-                            >
-                              Process
-                            </Button>
-                            <Button 
                               variant="default" 
                               size="sm"
                               onClick={() => acceptOrderAndAwardPoints(order.id)}
@@ -149,10 +141,6 @@ const OrdersTable = ({
                               <Award className="h-3 w-3 mr-1" />
                               Accept & Award
                             </Button>
-                          </>
-                        )}
-                        {order.status === "processing" && (
-                          <>
                             <Button 
                               variant="outline" 
                               size="sm"
@@ -162,30 +150,33 @@ const OrdersTable = ({
                               Complete
                             </Button>
                             <Button 
-                              variant="default" 
+                              variant="outline" 
                               size="sm"
-                              onClick={() => acceptOrderAndAwardPoints(order.id)}
-                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => updateOrderStatus(order.id, "cancelled")}
+                              className="text-red-500 hover:text-red-700"
                             >
-                              <Award className="h-3 w-3 mr-1" />
-                              Accept & Award
+                              Cancel
                             </Button>
                           </>
                         )}
-                        {(order.status === "pending" || order.status === "processing") && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => updateOrderStatus(order.id, "cancelled")}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            Cancel
-                          </Button>
+                        {order.status === "accepted" && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateOrderStatus(order.id, "completed")}
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Complete
+                            </Button>
+                            <span className="text-sm text-green-600 py-1 px-2">
+                              Points awarded
+                            </span>
+                          </>
                         )}
-                        {(order.status === "completed" || order.status === "accepted" || order.status === "cancelled") && (
+                        {(order.status === "completed" || order.status === "cancelled") && (
                           <span className="text-sm text-gray-500 py-1 px-2">
-                            {order.status === "accepted" ? "Order accepted & points awarded" : 
-                             order.status === "completed" ? "Order completed" : "Order cancelled"}
+                            {order.status === "completed" ? "Order completed" : "Order cancelled"}
                           </span>
                         )}
                       </div>

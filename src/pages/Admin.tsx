@@ -48,7 +48,7 @@ const Admin = () => {
     refreshAll 
   } = useAdminData(isAdmin);
 
-  // Check if user is admin
+  // Check if user is admin using user_roles table
   useEffect(() => {
     const checkIfAdmin = async () => {
       if (!user) {
@@ -63,38 +63,27 @@ const Admin = () => {
       }
 
       try {
+        // Check if user has 'admin' role in user_roles table
         const { data, error } = await supabase
-          .from('admins')
-          .select('id, email')
-          .eq('id', user.id)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
           .maybeSingle();
         
         if (error) throw error;
         
         if (data) {
+          console.log("Admin role confirmed for user:", user.id);
           setIsAdmin(true);
         } else {
-          const { data: emailCheck, error: emailError } = await supabase
-            .from('admins')
-            .select('id, email')
-            .eq('email', user.email)
-            .maybeSingle();
-            
-          if (emailCheck) {
-            await supabase
-              .from('admins')
-              .update({ id: user.id })
-              .eq('email', user.email);
-              
-            setIsAdmin(true);
-          } else {
-            toast({
-              title: "Access Denied",
-              description: "You don't have permission to access the admin dashboard.",
-              variant: "destructive"
-            });
-            navigate('/');
-          }
+          console.log("User does not have admin role");
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access the admin dashboard.",
+            variant: "destructive"
+          });
+          navigate('/');
         }
       } catch (error) {
         console.error("Admin check failed:", error);
@@ -108,7 +97,7 @@ const Admin = () => {
     };
 
     checkIfAdmin();
-  }, [user, navigate, toast, refreshAll]);
+  }, [user, navigate, toast]);
 
   // Set up real-time updates
   useEffect(() => {

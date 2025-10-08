@@ -7,34 +7,13 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
-      admins: {
-        Row: {
-          created_at: string | null
-          email: string
-          id: string
-          name: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          id: string
-          name?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          id?: string
-          name?: string | null
-        }
-        Relationships: []
-      }
       e_waste_requests: {
         Row: {
           address: string
@@ -43,7 +22,9 @@ export type Database = {
           id: string
           phone: string
           pickup_time: string
-          status: string
+          points_awarded: number | null
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
           user_id: string | null
           waste_type: string
         }
@@ -54,7 +35,9 @@ export type Database = {
           id?: string
           phone: string
           pickup_time: string
-          status?: string
+          points_awarded?: number | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
           user_id?: string | null
           waste_type: string
         }
@@ -65,11 +48,21 @@ export type Database = {
           id?: string
           phone?: string
           pickup_time?: string
-          status?: string
+          points_awarded?: number | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
           user_id?: string | null
           waste_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "e_waste_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -109,28 +102,49 @@ export type Database = {
       }
       rewards: {
         Row: {
-          created_at: string | null
+          created_at: string
           description: string
           id: string
           points: number
           title: string
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          created_at?: string | null
+          created_at?: string
           description: string
           id?: string
           points: number
           title: string
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          created_at?: string | null
+          created_at?: string
           description?: string
           id?: string
           points?: number
           title?: string
-          updated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -139,10 +153,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      order_status: "pending" | "accepted" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -269,6 +290,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      order_status: ["pending", "accepted", "completed", "cancelled"],
+    },
   },
 } as const

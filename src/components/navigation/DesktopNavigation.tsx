@@ -28,16 +28,17 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check if user is admin
+  // Check if user is admin using user_roles
   useEffect(() => {
     const checkIfAdmin = async () => {
       if (!user) return;
       
       try {
         const { data, error } = await supabase
-          .from('admins')
-          .select('id')
-          .eq('id', user.id)
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
           .maybeSingle();
           
         if (data) {

@@ -42,7 +42,7 @@ export interface ChartData {
 }
 
 type Profile = Tables<'profiles'>;
-type OrderStatus = "pending" | "processing" | "completed" | "cancelled" | "accepted";
+type OrderStatus = "pending" | "completed" | "cancelled" | "accepted";
 
 // Points awarded for different waste types
 const POINTS_BY_WASTE_TYPE: Record<string, number> = {
