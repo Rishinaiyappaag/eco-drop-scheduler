@@ -18,6 +18,7 @@ export interface Order {
   phone: string;
   address: string;
   description: string;
+  pointsAwarded: number;
 }
 
 export interface Stats {
@@ -143,6 +144,7 @@ export const useAdminData = (isAdmin: boolean) => {
           address,
           phone,
           description,
+          points_awarded,
           profiles!left(first_name, last_name, email, reward_points)
         `)
         .order('created_at', { ascending: false });
@@ -172,7 +174,8 @@ export const useAdminData = (isAdmin: boolean) => {
             points: profile?.reward_points || 0,
             phone: order.phone || "No phone",
             address: order.address || "No address",
-            description: order.description || "No description"
+            description: order.description || "No description",
+            pointsAwarded: order.points_awarded || 0
           };
         });
 
@@ -268,8 +271,7 @@ export const useAdminData = (isAdmin: boolean) => {
         description: `Order status changed to ${newStatus}.`,
       });
       
-      fetchOrders();
-      fetchStats();
+      await refreshAll();
     } catch (error: any) {
       console.error("Error updating order status:", error);
       toast({
@@ -285,11 +287,21 @@ export const useAdminData = (isAdmin: boolean) => {
     try {
       const { data: orderData, error: orderError } = await supabase
         .from('e_waste_requests')
-        .select('user_id, waste_type, status')
+        .select('user_id, waste_type, status, points_awarded')
         .eq('id', orderId)
         .single();
         
       if (orderError) throw orderError;
+      
+      // Check if points were already awarded
+      if (orderData.points_awarded && orderData.points_awarded > 0) {
+        toast({
+          title: "Already Awarded",
+          description: "Points have already been awarded for this order.",
+          variant: "destructive"
+        });
+        return;
+      }
       
       let pointsAwarded = 0;
       if (orderData.user_id) {
@@ -312,9 +324,13 @@ export const useAdminData = (isAdmin: boolean) => {
         if (updateError) throw updateError;
       }
       
+      // Update order status to accepted and store points awarded
       const { error } = await supabase
         .from('e_waste_requests')
-        .update({ status: 'accepted' })
+        .update({ 
+          status: 'accepted',
+          points_awarded: pointsAwarded 
+        })
         .eq('id', orderId);
         
       if (error) throw error;
@@ -326,8 +342,7 @@ export const useAdminData = (isAdmin: boolean) => {
           : `Order accepted successfully!`,
       });
       
-      fetchOrders();
-      fetchStats();
+      await refreshAll();
     } catch (error: any) {
       console.error("Error accepting order:", error);
       toast({

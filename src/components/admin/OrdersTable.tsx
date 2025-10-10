@@ -36,6 +36,7 @@ interface Order {
   phone: string;
   address: string;
   description: string;
+  pointsAwarded: number;
 }
 
 type OrderStatus = "pending" | "completed" | "cancelled" | "accepted";
@@ -169,8 +170,9 @@ const OrdersTable = ({
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Complete
                             </Button>
-                            <span className="text-sm text-green-600 py-1 px-2">
-                              Points awarded
+                            <span className="text-sm text-green-600 py-1 px-2 flex items-center">
+                              <Award className="h-3 w-3 mr-1" />
+                              {order.pointsAwarded} pts awarded
                             </span>
                           </>
                         )}
