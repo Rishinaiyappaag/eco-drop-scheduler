@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Settings, Gift, Shield } from "lucide-react";
+import { LogOut, User, Settings, Gift, Shield, Package } from "lucide-react";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -152,6 +152,10 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
               <DropdownMenuItem onClick={() => window.location.href = '/profile'} className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/profile?tab=orders'} className="cursor-pointer">
+                <Package className="mr-2 h-4 w-4" />
+                <span>Orders</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.location.href = '/rewards'} className="cursor-pointer">
                 <Gift className="mr-2 h-4 w-4" />

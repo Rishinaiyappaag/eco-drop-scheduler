@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Settings, Gift, Shield } from "lucide-react";
+import { LogOut, User, Settings, Gift, Shield, Package } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -90,6 +90,16 @@ const MobileNavigation = ({ user, isMenuOpen, toggleMenu, handleSignOut }: Mobil
               onClick={toggleMenu}
             >
               Profile
+            </Link>
+            <Link 
+              to="/profile?tab=orders" 
+              className="block px-3 py-2 rounded-md text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary dark:hover:text-primary"
+              onClick={toggleMenu}
+            >
+              <div className="flex items-center">
+                <Package className="h-4 w-4 mr-2" />
+                Orders
+              </div>
             </Link>
             
             {isAdmin && (
