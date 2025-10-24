@@ -81,6 +81,7 @@ const DesktopNavigation = ({ user, handleSignOut }: DesktopNavigationProps) => {
             reward_points: 0,
             address: null,
             phone: null,
+            avatar_url: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });

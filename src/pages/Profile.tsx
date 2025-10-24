@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { User, Home, Gift, Settings, LogOut, Edit, Check, Package } from "lucide-react";
+import { User, Home, Gift, Settings, LogOut, Edit, Check, Package, Camera, Loader2 } from "lucide-react";
 import UserOrders from "@/components/profile/UserOrders";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -45,6 +45,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   
   // Form definition
   const form = useForm<ProfileFormValues>({
@@ -193,6 +194,92 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !event.target.files || event.target.files.length === 0) return;
+    
+    const file = event.target.files[0];
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setUploadingAvatar(true);
+      
+      // Generate unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      // Delete old avatar if exists
+      if (profile?.avatar_url) {
+        const oldPath = profile.avatar_url.split('/').slice(-2).join('/');
+        await supabase.storage.from('avatars').remove([oldPath]);
+      }
+      
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+      
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+      
+      if (updateError) throw updateError;
+      
+      // Refresh profile
+      const { data: updatedProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (fetchError) throw fetchError;
+      
+      setProfile(updatedProfile);
+      await refreshProfile();
+      
+      toast({
+        title: "Avatar updated",
+        description: "Your profile photo has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Error uploading avatar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -235,12 +322,32 @@ const Profile = () => {
           <div className="md:col-span-1">
             <Card>
               <CardHeader className="text-center">
-                <Avatar className="h-24 w-24 mx-auto">
-                  <AvatarImage src="/placeholder.svg" alt={`${profile?.first_name} ${profile?.last_name}`} />
-                  <AvatarFallback className="bg-primary text-white text-xl">
-                    {profile?.first_name?.[0]}{profile?.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative inline-block">
+                  <Avatar className="h-24 w-24 mx-auto">
+                    <AvatarImage 
+                      src={profile?.avatar_url || "/placeholder.svg"} 
+                      alt={`${profile?.first_name} ${profile?.last_name}`} 
+                    />
+                    <AvatarFallback className="bg-primary text-white text-xl">
+                      {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-primary text-white rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors">
+                    {uploadingAvatar ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Camera size={16} />
+                    )}
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                  />
+                </div>
                 <CardTitle className="mt-4">{profile?.first_name} {profile?.last_name}</CardTitle>
                 <CardDescription>{profile?.email}</CardDescription>
                 <Badge variant="secondary" className="mt-2">
