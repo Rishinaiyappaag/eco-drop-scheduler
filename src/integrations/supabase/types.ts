@@ -24,6 +24,7 @@ export type Database = {
           pickup_time: string
           points_awarded: number | null
           status: Database["public"]["Enums"]["order_status"]
+          status_history: Json | null
           updated_at: string
           user_id: string | null
           waste_type: string
@@ -37,6 +38,7 @@ export type Database = {
           pickup_time: string
           points_awarded?: number | null
           status?: Database["public"]["Enums"]["order_status"]
+          status_history?: Json | null
           updated_at?: string
           user_id?: string | null
           waste_type: string
@@ -50,6 +52,7 @@ export type Database = {
           pickup_time?: string
           points_awarded?: number | null
           status?: Database["public"]["Enums"]["order_status"]
+          status_history?: Json | null
           updated_at?: string
           user_id?: string | null
           waste_type?: string
@@ -163,7 +166,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      order_status: "pending" | "accepted" | "completed" | "cancelled"
+      order_status:
+        | "pending"
+        | "accepted"
+        | "completed"
+        | "cancelled"
+        | "picked_up"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -292,7 +300,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      order_status: ["pending", "accepted", "completed", "cancelled"],
+      order_status: [
+        "pending",
+        "accepted",
+        "completed",
+        "cancelled",
+        "picked_up",
+      ],
     },
   },
 } as const
