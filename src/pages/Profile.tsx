@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { User, Home, Gift, Settings, LogOut, Edit, Check } from "lucide-react";
+import { User, Home, Gift, Settings, LogOut, Edit, Check, Package } from "lucide-react";
+import UserOrders from "@/components/profile/UserOrders";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Switch } from "@/components/ui/switch";
@@ -248,15 +249,19 @@ const Profile = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer" onClick={() => navigate('/profile')}>
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer" onClick={() => navigate('/profile')}>
                     <User size={18} className="text-primary" />
                     <span>Profile</span>
                   </div>
-                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer" onClick={() => navigate('/schedule')}>
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer" onClick={() => navigate('/schedule')}>
                     <Home size={18} className="text-primary" />
                     <span>Dashboard</span>
                   </div>
-                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer" onClick={() => navigate('/rewards')}>
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer" onClick={() => navigate('/profile?tab=orders')}>
+                    <Package size={18} className="text-primary" />
+                    <span>Orders</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer" onClick={() => navigate('/rewards')}>
                     <Gift size={18} className="text-primary" />
                     <span>Coupons & Rewards</span>
                   </div>
@@ -278,8 +283,9 @@ const Profile = () => {
           {/* Main Content */}
           <div className="md:col-span-2">
             <Tabs defaultValue="profile">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="profile">Profile</TabsTrigger>
+                <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="coupons">Coupons</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
@@ -411,6 +417,10 @@ const Profile = () => {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="orders" className="mt-6">
+                <UserOrders userId={user.id} />
               </TabsContent>
 
               <TabsContent value="coupons" className="mt-6">

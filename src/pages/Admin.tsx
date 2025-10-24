@@ -39,13 +39,14 @@ const Admin = () => {
   const { user } = useSupabase();
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const { 
-    orders, 
-    stats, 
-    chartData, 
-    updateOrderStatus, 
-    acceptOrderAndAwardPoints, 
-    refreshAll 
+  const {
+    orders,
+    stats,
+    chartData,
+    updateOrderStatus,
+    acceptOrderAndAwardPoints,
+    completeOrderAndAwardPoints,
+    refreshAll
   } = useAdminData(isAdmin);
 
   // Check if user is admin using user_roles table
@@ -253,6 +254,7 @@ const Admin = () => {
               setSearchTerm={setSearchTerm}
               updateOrderStatus={updateOrderStatus}
               acceptOrderAndAwardPoints={acceptOrderAndAwardPoints}
+              completeOrderAndAwardPoints={completeOrderAndAwardPoints}
             />
           )}
 

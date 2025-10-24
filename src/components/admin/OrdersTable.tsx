@@ -20,7 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Search,
   Award,
-  CheckCircle
+  CheckCircle,
+  Package
 } from "lucide-react";
 
 interface Order {
@@ -39,7 +40,7 @@ interface Order {
   pointsAwarded: number;
 }
 
-type OrderStatus = "pending" | "completed" | "cancelled" | "accepted";
+type OrderStatus = "pending" | "completed" | "cancelled" | "accepted" | "picked_up";
 
 interface OrdersTableProps {
   orders: Order[];
@@ -48,6 +49,7 @@ interface OrdersTableProps {
   setSearchTerm: (term: string) => void;
   updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   acceptOrderAndAwardPoints: (orderId: string) => void;
+  completeOrderAndAwardPoints: (orderId: string) => void;
 }
 
 const OrdersTable = ({ 
@@ -56,20 +58,29 @@ const OrdersTable = ({
   searchTerm, 
   setSearchTerm, 
   updateOrderStatus, 
-  acceptOrderAndAwardPoints 
+  acceptOrderAndAwardPoints,
+  completeOrderAndAwardPoints 
 }: OrdersTableProps) => {
   const getStatusColor = (status: string) => {
     switch(status.toLowerCase()) {
-      case "accepted": return "bg-green-100 text-green-800";
-      case "completed": return "bg-green-100 text-green-800";
       case "pending": return "bg-yellow-100 text-yellow-800";
+      case "accepted": return "bg-blue-100 text-blue-800";
+      case "picked_up": return "bg-purple-100 text-purple-800";
+      case "completed": return "bg-green-100 text-green-800";
       case "cancelled": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
   const formatStatus = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    const statusMap: Record<string, string> = {
+      pending: "Order Placed",
+      accepted: "Accepted",
+      picked_up: "Picked Up",
+      completed: "Delivered",
+      cancelled: "Cancelled"
+    };
+    return statusMap[status.toLowerCase()] || status;
   };
 
   return (
@@ -139,16 +150,8 @@ const OrdersTable = ({
                               onClick={() => acceptOrderAndAwardPoints(order.id)}
                               className="bg-green-600 hover:bg-green-700"
                             >
-                              <Award className="h-3 w-3 mr-1" />
-                              Accept & Award
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateOrderStatus(order.id, "completed")}
-                            >
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              Complete
+                              Accept Order
                             </Button>
                             <Button 
                               variant="outline" 
@@ -161,24 +164,36 @@ const OrdersTable = ({
                           </>
                         )}
                         {order.status === "accepted" && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateOrderStatus(order.id, "completed")}
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Complete
-                            </Button>
-                            <span className="text-sm text-green-600 py-1 px-2 flex items-center">
-                              <Award className="h-3 w-3 mr-1" />
-                              {order.pointsAwarded} pts awarded
-                            </span>
-                          </>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => updateOrderStatus(order.id, "picked_up")}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Package className="h-3 w-3 mr-1" />
+                            Mark Picked Up
+                          </Button>
                         )}
-                        {(order.status === "completed" || order.status === "cancelled") && (
+                        {order.status === "picked_up" && (
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => completeOrderAndAwardPoints(order.id)}
+                            className="bg-purple-600 hover:bg-purple-700"
+                          >
+                            <Award className="h-3 w-3 mr-1" />
+                            Complete & Award Points
+                          </Button>
+                        )}
+                        {order.status === "completed" && order.pointsAwarded > 0 && (
+                          <span className="text-sm text-green-600 py-1 px-2 flex items-center">
+                            <Award className="h-3 w-3 mr-1" />
+                            {order.pointsAwarded} pts awarded
+                          </span>
+                        )}
+                        {order.status === "cancelled" && (
                           <span className="text-sm text-gray-500 py-1 px-2">
-                            {order.status === "completed" ? "Order completed" : "Order cancelled"}
+                            Order cancelled
                           </span>
                         )}
                       </div>

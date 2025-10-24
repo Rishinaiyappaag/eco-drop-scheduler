@@ -204,7 +204,7 @@ export const useAdminData = (isAdmin: boolean) => {
 
       const stats = {
         totalOrders: data.length,
-        completedOrders: data.filter(order => order.status.toLowerCase() === 'completed' || order.status.toLowerCase() === 'accepted').length,
+        completedOrders: data.filter(order => order.status.toLowerCase() === 'completed').length,
         pendingOrders: data.filter(order => order.status.toLowerCase() === 'pending').length,
         totalPoints: 0,
         pickupOrders: data.filter(order => !order.address.includes('Drop-off')).length,
@@ -282,12 +282,47 @@ export const useAdminData = (isAdmin: boolean) => {
     }
   };
 
-  // Accept order and award points
+  // Accept order (WITHOUT awarding points - points awarded on completion)
   const acceptOrderAndAwardPoints = async (orderId: string) => {
     try {
       const { data: orderData, error: orderError } = await supabase
         .from('e_waste_requests')
-        .select('user_id, waste_type, status, points_awarded')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+        
+      if (orderError) throw orderError;
+      
+      // Update order status to accepted
+      const { error } = await supabase
+        .from('e_waste_requests')
+        .update({ status: 'accepted' })
+        .eq('id', orderId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Order Accepted",
+        description: "Order accepted successfully!",
+      });
+      
+      await refreshAll();
+    } catch (error: any) {
+      console.error("Error accepting order:", error);
+      toast({
+        title: "Accept Failed",
+        description: error.message || "Could not accept order.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Complete order and award points
+  const completeOrderAndAwardPoints = async (orderId: string) => {
+    try {
+      const { data: orderData, error: orderError } = await supabase
+        .from('e_waste_requests')
+        .select('user_id, waste_type, points_awarded')
         .eq('id', orderId)
         .single();
         
@@ -296,7 +331,7 @@ export const useAdminData = (isAdmin: boolean) => {
       // Check if points were already awarded
       if (orderData.points_awarded && orderData.points_awarded > 0) {
         toast({
-          title: "Already Awarded",
+          title: "Already Completed",
           description: "Points have already been awarded for this order.",
           variant: "destructive"
         });
@@ -324,11 +359,11 @@ export const useAdminData = (isAdmin: boolean) => {
         if (updateError) throw updateError;
       }
       
-      // Update order status to accepted and store points awarded
+      // Update order status to completed and store points awarded
       const { error } = await supabase
         .from('e_waste_requests')
         .update({ 
-          status: 'accepted',
+          status: 'completed',
           points_awarded: pointsAwarded 
         })
         .eq('id', orderId);
@@ -336,18 +371,18 @@ export const useAdminData = (isAdmin: boolean) => {
       if (error) throw error;
       
       toast({
-        title: "Order Accepted",
+        title: "Order Completed",
         description: pointsAwarded > 0 
-          ? `Order accepted successfully! ${pointsAwarded} points awarded to user.`
-          : `Order accepted successfully!`,
+          ? `Order completed! ${pointsAwarded} reward points awarded to user.`
+          : `Order completed successfully!`,
       });
       
       await refreshAll();
     } catch (error: any) {
-      console.error("Error accepting order:", error);
+      console.error("Error completing order:", error);
       toast({
-        title: "Accept Failed",
-        description: error.message || "Could not accept order.",
+        title: "Complete Failed",
+        description: error.message || "Could not complete order.",
         variant: "destructive"
       });
     }
@@ -375,6 +410,7 @@ export const useAdminData = (isAdmin: boolean) => {
     chartData,
     updateOrderStatus,
     acceptOrderAndAwardPoints,
+    completeOrderAndAwardPoints,
     refreshAll
   };
 };
