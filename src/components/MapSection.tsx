@@ -14,11 +14,11 @@ import iconShadow from "leaflet/dist/images/marker-shadow.png";
 const dropOffLocations = [
   {
     id: 1,
-    name: "Eco Recyclers Hub",
-    address: "123 Koramangala Main Road, Bangalore - 560034",
+    name: "Elxion E-waste Recycling",
+    address: "No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041",
     hours: "Mon-Sat: 9am-6pm",
-    phone: "(555) 123-4567",
-    position: [12.9352, 77.6245] as [number, number] // Koramangala coordinates
+    phone: "08026589066",
+    position: [12.9102, 77.5922] as [number, number] // JP Nagar coordinates
   },
   {
     id: 2,

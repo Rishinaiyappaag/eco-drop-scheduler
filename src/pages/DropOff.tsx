@@ -36,8 +36,8 @@ const DropOff = () => {
                   <CardContent className="p-0">
                     <div className="bg-primary-100 p-4 relative">
                       <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
-                      <h3 className="font-semibold text-lg text-primary-800">Eco Recyclers Hub</h3>
-                      <p className="text-sm text-gray-700">123 Koramangala Main Road, Bangalore - 560034</p>
+                      <h3 className="font-semibold text-lg text-primary-800">Elxion E-waste Recycling</h3>
+                      <p className="text-sm text-gray-700">No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041</p>
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ const DropOff = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-gray-500" />
-                        <p className="text-sm text-gray-600">(555) 123-4567</p>
+                        <p className="text-sm text-gray-600">08026589066</p>
                       </div>
                       <p className="text-sm text-emerald-600 mt-2 font-medium">10 reward points per visit</p>
                     </div>
