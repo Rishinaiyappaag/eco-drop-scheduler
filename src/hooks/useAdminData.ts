@@ -256,6 +256,18 @@ export const useAdminData = (isAdmin: boolean) => {
     }
   };
 
+  // Send email notification
+  const sendStatusNotification = async (orderId: string, status: string) => {
+    try {
+      await supabase.functions.invoke('send-order-notification', {
+        body: { orderId, status }
+      });
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      // Don't throw - notification is non-critical
+    }
+  };
+
   // Update order status WITHOUT awarding points
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
@@ -266,9 +278,12 @@ export const useAdminData = (isAdmin: boolean) => {
         
       if (error) throw error;
       
+      // Send email notification
+      await sendStatusNotification(orderId, newStatus);
+      
       toast({
         title: "Order Updated",
-        description: `Order status changed to ${newStatus}.`,
+        description: `Order status changed to ${newStatus}. Email notification sent.`,
       });
       
       await refreshAll();
@@ -301,9 +316,12 @@ export const useAdminData = (isAdmin: boolean) => {
         
       if (error) throw error;
       
+      // Send email notification
+      await sendStatusNotification(orderId, 'accepted');
+      
       toast({
         title: "Order Accepted",
-        description: "Order accepted successfully!",
+        description: "Order accepted successfully! Email notification sent.",
       });
       
       await refreshAll();
@@ -370,11 +388,14 @@ export const useAdminData = (isAdmin: boolean) => {
         
       if (error) throw error;
       
+      // Send email notification
+      await sendStatusNotification(orderId, 'completed');
+      
       toast({
         title: "Order Completed",
         description: pointsAwarded > 0 
-          ? `Order completed! ${pointsAwarded} reward points awarded to user.`
-          : `Order completed successfully!`,
+          ? `Order completed! ${pointsAwarded} reward points awarded. Email notification sent.`
+          : `Order completed successfully! Email notification sent.`,
       });
       
       await refreshAll();
