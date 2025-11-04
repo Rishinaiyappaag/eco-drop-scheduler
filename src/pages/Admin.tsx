@@ -16,8 +16,10 @@ import {
   ChartBar,
   Gift,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  FileDown
 } from "lucide-react";
+import * as XLSX from 'xlsx';
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useSupabase } from "@/lib/SupabaseProvider";
@@ -159,6 +161,57 @@ const Admin = () => {
     }
   };
 
+  const handleExtractReport = async () => {
+    try {
+      const { data: ordersData, error } = await supabase
+        .from('e_waste_requests')
+        .select(`
+          *,
+          profiles (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const reportData = ordersData?.map(order => ({
+        'First Name': order.profiles?.first_name || 'N/A',
+        'Last Name': order.profiles?.last_name || 'N/A',
+        'Email': order.profiles?.email || 'N/A',
+        'Phone': order.phone || 'N/A',
+        'Address': order.address || 'N/A',
+        'Pickup Date': new Date(order.pickup_time).toLocaleDateString(),
+        'E-Waste Type': order.waste_type || 'N/A',
+        'Description': order.description || 'N/A',
+        'Status': order.status || 'N/A',
+        'Points Awarded': order.points_awarded || 0,
+        'Created At': new Date(order.created_at).toLocaleString(),
+      })) || [];
+
+      const worksheet = XLSX.utils.json_to_sheet(reportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Pickup Orders');
+      
+      const fileName = `pickup_orders_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      toast({
+        title: "Report Exported",
+        description: "Pickup orders report has been downloaded successfully."
+      });
+    } catch (error) {
+      console.error("Error extracting report:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export report. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -228,6 +281,13 @@ const Admin = () => {
               >
                 <Users className="h-4 w-4 mr-2" />
                 Users
+              </Button>
+              <Button 
+                onClick={handleExtractReport}
+                variant="outline"
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Extract Report
               </Button>
               <Button 
                 onClick={handleRefresh}
