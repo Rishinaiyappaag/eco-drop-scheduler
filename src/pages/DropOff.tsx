@@ -48,6 +48,7 @@ const DropOff = () => {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <p className="text-sm text-gray-600">08026589066</p>
                       </div>
+                      <a href="http://www.elxion.in/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline block">Visit Website</a>
                       <p className="text-sm text-emerald-600 mt-2 font-medium">10 reward points per visit</p>
                     </div>
                   </CardContent>

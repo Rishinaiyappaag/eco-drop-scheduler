@@ -18,6 +18,7 @@ const dropOffLocations = [
     address: "No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041",
     hours: "Mon-Sat: 9am-6pm",
     phone: "08026589066",
+    website: "http://www.elxion.in/",
     position: [12.9102, 77.5922] as [number, number] // JP Nagar coordinates
   },
   {
