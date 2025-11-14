@@ -60,15 +60,15 @@ Save changes to see live updates in the browser.
 ├── src/
 │   ├── components/        # Reusable UI components <br>
 │   ├── pages/             # Application pages <br>
-│   ├── assets/            # Static images, icons, fonts
-│   ├── App.tsx            # Root component
-│   └── main.tsx           # Entry point
+│   ├── assets/            # Static images, icons, fonts <br>
+│   ├── App.tsx            # Root component <br>
+│   └── main.tsx           # Entry point <br>
 │
-├── public/                # Public assets
-├── index.html             # Base HTML template
-├── tailwind.config.js     # Tailwind configuration
-├── tsconfig.json          # TypeScript configuration
-└── package.json           # Project dependencies and scripts
+├── public/                # Public assets <br>
+├── index.html             # Base HTML template <br>
+├── tailwind.config.js     # Tailwind configuration <br>
+├── tsconfig.json          # TypeScript configuration <br>
+└── package.json           # Project dependencies and scripts <br>
 
 
 # 💡 Useful Commands
@@ -77,5 +77,6 @@ npm run dev	Start the local development server
 npm run build	Create an optimized production build
 npm run preview	Preview the production build locally
 npm run lint	Run ESLint to check for issues
+
 
 
