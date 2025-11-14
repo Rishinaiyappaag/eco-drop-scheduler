@@ -58,8 +58,8 @@ Save changes to see live updates in the browser.
 
 # 🧾 Project Structure
 ├── src/
-│   ├── components/        # Reusable UI components
-│   ├── pages/             # Application pages
+│   ├── components/        # Reusable UI components <br>
+│   ├── pages/             # Application pages <br>
 │   ├── assets/            # Static images, icons, fonts
 │   ├── App.tsx            # Root component
 │   └── main.tsx           # Entry point
@@ -77,4 +77,5 @@ npm run dev	Start the local development server
 npm run build	Create an optimized production build
 npm run preview	Preview the production build locally
 npm run lint	Run ESLint to check for issues
+
 
