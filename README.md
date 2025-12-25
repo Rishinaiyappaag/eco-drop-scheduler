@@ -62,17 +62,17 @@ To customize the project:
 ## 🧾 Project Structure
 
 ├── src/
-│   ├── components/        Reusable UI components
-│   ├── pages/             Application pages
-│   ├── assets/            Images icons fonts
-│   ├── App.tsx            Root component
-│   └── main.tsx           Application entry point
+│   ├── components/        Reusable UI components <br>
+│   ├── pages/             Application pages <br>
+│   ├── assets/            Images icons fonts <br>
+│   ├── App.tsx            Root component <br>
+│   └── main.tsx           Application entry point <br>
 │
-├── public/                Public static assets
-├── index.html             Base HTML template
-├── tailwind.config.js     Tailwind CSS configuration
-├── tsconfig.json          TypeScript configuration
-└── package.json           Project dependencies and scripts
+├── public/                Public static assets <br>
+├── index.html             Base HTML template <br>
+├── tailwind.config.js     Tailwind CSS configuration <br>
+├── tsconfig.json          TypeScript configuration <br>
+└── package.json           Project dependencies and scripts <br>
 
 ---
 
@@ -91,3 +91,4 @@ npm run lint      Run ESLint to check for issues
 - Fully responsive UI using Tailwind CSS
 - Clean and scalable project structure
 - Easy to extend with backend services like Supabase
+
