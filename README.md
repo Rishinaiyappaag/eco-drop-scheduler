@@ -3,7 +3,7 @@
 ## 📘 Project Overview
 
 Eco Drop Scheduler is a modern web application designed to manage e-waste collection scheduling efficiently.
-It is built with a high-performance frontend stack focused on speed, scalability, and clean UI design.
+It is built with a high-performance frontend stack focused on speed, scalability, and clean UI design. <br>
 
 This project uses Vite, React, TypeScript, Tailwind CSS, and shadcn-ui to ensure fast development,
 type safety, and reusable UI components.
@@ -91,4 +91,5 @@ npm run lint      Run ESLint to check for issues
 - Fully responsive UI using Tailwind CSS
 - Clean and scalable project structure
 - Easy to extend with backend services like Supabase
+
 
