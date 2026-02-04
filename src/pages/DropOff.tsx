@@ -117,6 +117,28 @@ const DropOff = () => {
                     </div>
                   </CardContent>
                 </Card>
+                
+                <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <CardContent className="p-0">
+                    <div className="bg-primary-100 p-4 relative">
+                      <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
+                      <h3 className="font-semibold text-lg text-primary-800">Saahas Waste Management Pvt Ltd</h3>
+                      <p className="text-sm text-gray-700">32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076</p>
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <p className="text-sm text-gray-600">Mon-Sat: 9AM-6PM</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <p className="text-sm text-gray-600">18002586676</p>
+                      </div>
+                      <a href="https://saahaszerowaste.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline block">Visit Website</a>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">12 reward points per visit</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
