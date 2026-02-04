@@ -96,6 +96,27 @@ const DropOff = () => {
                     </div>
                   </CardContent>
                 </Card>
+                
+                <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <CardContent className="p-0">
+                    <div className="bg-primary-100 p-4 relative">
+                      <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
+                      <h3 className="font-semibold text-lg text-primary-800">Ecosphere Waste Solutions</h3>
+                      <p className="text-sm text-gray-700">Flat No 201, Dhammanagi Zeus Apartment, Millers Tank Bund Rd, Vasanth Nagar, Bengaluru, Karnataka 560051</p>
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-500" />
+                        <p className="text-sm text-gray-600">Mon-Sat: 9AM-6PM</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <p className="text-sm text-gray-600">09035489496</p>
+                      </div>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">10 reward points per visit</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
