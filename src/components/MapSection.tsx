@@ -45,6 +45,15 @@ const dropOffLocations = [
     hours: "Mon-Sat: 9AM-6PM",
     phone: "09035489496",
     position: [12.9920, 77.5870] as [number, number]
+  },
+  {
+    id: 5,
+    name: "Saahas Waste Management Pvt Ltd",
+    address: "32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076",
+    hours: "Mon-Sat: 9AM-6PM",
+    phone: "18002586676",
+    website: "https://saahaszerowaste.com/",
+    position: [12.9166, 77.6101] as [number, number]
   }
 ];
 
