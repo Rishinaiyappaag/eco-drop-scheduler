@@ -16,36 +16,27 @@ const dropOffLocations = [
     id: 1,
     name: "Elxion E-waste Recycling",
     address: "No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041",
-    hours: "Mon-Sat: 9am-6pm",
+    hours: "Mon-Sat: 9AM-6PM",
     phone: "08026589066",
     website: "http://www.elxion.in/",
-    position: [12.9102, 77.5922] as [number, number] // JP Nagar coordinates
+    position: [12.9076, 77.5856] as [number, number]
   },
   {
     id: 2,
-    name: "Zolopik",
-    address: "58, 22nd Main Rd, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041",
-    hours: "Mon-Sat: 9am-6pm",
-    phone: "09743440440",
-    website: "https://www.zolopik.com/",
-    position: [12.9102, 77.5922] as [number, number] // JP Nagar coordinates
+    name: "Ewaste Hub",
+    address: "No 3, Oppo Hombegowda Ground, 10th Cross, Lakkasandra Extension, Wilson Garden, Bengaluru, Karnataka 560027",
+    hours: "Mon-Sun: 10AM-8PM",
+    phone: "09066319066",
+    position: [12.9401, 77.5948] as [number, number]
   },
   {
     id: 3,
-    name: "Saahas Waste Management Pvt Ltd",
-    address: "32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076",
-    hours: "Mon-Sat: 9am-6pm",
-    phone: "18002586676",
-    website: "https://saahaszerowaste.com/",
-    position: [12.9166, 77.6101] as [number, number] // BTM Layout coordinates
-  },
-  {
-    id: 4,
-    name: "Bengaluru E-Waste Collection",
-    address: "101 MG Road, Bangalore - 560001",
-    hours: "Mon-Fri: 9am-5pm",
-    phone: "(555) 234-5678",
-    position: [12.9757, 77.6011] as [number, number] // MG Road coordinates
+    name: "Zolopik",
+    address: "58, 22nd Main Rd, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560078",
+    hours: "Tue-Sun: 8AM-7PM",
+    phone: "09743440440",
+    website: "https://www.zolopik.com/",
+    position: [12.9051, 77.5869] as [number, number]
   }
 ];
 
