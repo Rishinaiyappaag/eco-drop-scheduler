@@ -37,6 +37,14 @@ const dropOffLocations = [
     phone: "09743440440",
     website: "https://www.zolopik.com/",
     position: [12.9051, 77.5869] as [number, number]
+  },
+  {
+    id: 4,
+    name: "Ecosphere Waste Solutions",
+    address: "Flat No 201, Dhammanagi Zeus Apartment, Millers Tank Bund Rd, Vasanth Nagar, Bengaluru, Karnataka 560051",
+    hours: "Mon-Sat: 9AM-6PM",
+    phone: "09035489496",
+    position: [12.9920, 77.5870] as [number, number]
   }
 ];
 
