@@ -130,3 +130,28 @@ export const signOut = async () => {
   }
   return true
 }
+
+export const signInWithGoogle = async () => {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`
+      }
+    })
+
+    if (error) {
+      throw error
+    }
+
+    return { success: true, data }
+  } catch (error: any) {
+    console.error('Google sign in error:', error)
+    toast({
+      title: 'Google Sign In failed',
+      description: error.message || 'Failed to sign in with Google. Please try again.',
+      variant: 'destructive'
+    })
+    return { success: false, error }
+  }
+}
