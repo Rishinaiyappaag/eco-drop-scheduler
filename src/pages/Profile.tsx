@@ -166,31 +166,14 @@ const Profile = () => {
     try {
       setIsDeletingAccount(true);
       
-      // Delete user's e-waste requests
-      await supabase
-        .from('e_waste_requests')
-        .delete()
-        .eq('user_id', user.id);
+      // Call the edge function to delete the user account completely
+      const { data, error } = await supabase.functions.invoke('delete-user');
       
-      // Delete user's avatar from storage if exists
-      if (profile?.avatar_url) {
-        const avatarPath = profile.avatar_url.split('/').slice(-2).join('/');
-        await supabase.storage.from('avatars').remove([avatarPath]);
+      if (error) {
+        throw error;
       }
       
-      // Delete profile (this will cascade due to FK)
-      await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
-      
-      // Delete user role
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', user.id);
-      
-      // Sign out the user (this doesn't delete the auth user, but logs them out)
+      // Sign out the user locally
       await signOut();
       
       toast({
