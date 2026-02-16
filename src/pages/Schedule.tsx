@@ -1,4 +1,3 @@
-
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import PickupForm from "@/components/PickupForm";
@@ -15,8 +14,11 @@ const Schedule = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <NavBar />
+
       <main className="flex-grow pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          
+          {/* Page Heading */}
           <div className="text-center mb-12">
             <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
               Schedule an E-Waste Pickup
@@ -25,24 +27,31 @@ const Schedule = () => {
               Let us pick up your e-waste at a time that's convenient for you.
             </p>
           </div>
-          
+
+          {/* Sign-in Alert */}
           {!isLoading && !user && (
             <div className="max-w-2xl mx-auto mb-8">
-              <Alert variant="default" className="border-amber-500 bg-amber-50">
+              <Alert
+                variant="default"
+                className="border-amber-500 bg-amber-50"
+              >
                 <InfoIcon className="h-4 w-4 text-amber-600" />
                 <AlertTitle>Sign in recommended</AlertTitle>
                 <AlertDescription>
-                  To earn reward points and track your pickups, please sign in or create an account.
+                  To earn reward points and track your pickups, please sign in
+                  or create an account.
                 </AlertDescription>
+
                 <div className="mt-4 flex space-x-4">
                   <Button
                     variant="outline"
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate("/login")}
                   >
                     Sign In
                   </Button>
+
                   <Button
-                    onClick={() => navigate('/register?from=pickup')}
+                    onClick={() => navigate("/register?from=pickup")}
                   >
                     Create Account
                   </Button>
@@ -50,12 +59,14 @@ const Schedule = () => {
               </Alert>
             </div>
           )}
-          
+
+          {/* Pickup Form */}
           <div className="max-w-2xl mx-auto">
             <PickupForm />
           </div>
         </div>
       </main>
+
       <Footer />
     </div>
   );

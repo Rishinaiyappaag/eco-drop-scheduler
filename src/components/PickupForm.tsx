@@ -1,8 +1,8 @@
-
 import { Form } from "@/components/ui/form";
 import { useSupabase } from "@/lib/SupabaseProvider";
 import { usePickupForm } from "@/hooks/usePickupForm";
-import { usePickupFormSubmit, wasteTypes } from "@/hooks/usePickupFormSubmit";
+import { usePickupFormSubmit } from "@/hooks/usePickupFormSubmit";
+import { wasteTypes } from "@/hooks/usePickupFormSubmit";
 import { PersonalInfoFields } from "@/components/pickup-form/PersonalInfoFields";
 import { WasteTypeField } from "@/components/pickup-form/WasteTypeField";
 import { DatePickerField } from "@/components/pickup-form/DatePickerField";
@@ -14,7 +14,7 @@ const PickupForm = () => {
   const { user } = useSupabase();
   const form = usePickupForm();
   const { handleSubmit, isSubmitting } = usePickupFormSubmit();
-  
+
   const onSubmit = async (values: any) => {
     const result = await handleSubmit(values);
     if (result.success) {
@@ -24,20 +24,22 @@ const PickupForm = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg dark:bg-gray-800 dark:text-gray-100">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6 dark:text-white">Schedule Your Pickup</h3>
-      
+      <h3 className="text-2xl font-bold text-gray-900 mb-6 dark:text-white">
+        Schedule Your Pickup
+      </h3>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <PersonalInfoFields control={form.control} />
-          
+
           <WasteTypeField control={form.control} wasteTypes={wasteTypes} />
-          
+
           <DatePickerField control={form.control} />
-          
+
           <DescriptionField control={form.control} />
-          
+
           <TermsCheckbox control={form.control} />
-          
+
           <SubmitButton isSubmitting={isSubmitting} />
         </form>
       </Form>

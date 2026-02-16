@@ -1,11 +1,13 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabase } from "@/lib/SupabaseProvider";
-import { Button } from "@/components/ui/button"; 
+
+/* -----------------------------------------
+   TYPES
+------------------------------------------ */
 
 export type PickupFormValues = {
   name: string;
@@ -24,6 +26,10 @@ export type WasteTypeOption = {
   points: number;
 };
 
+/* -----------------------------------------
+   WASTE TYPES (KEPT INSIDE THIS FILE)
+------------------------------------------ */
+
 export const wasteTypes: WasteTypeOption[] = [
   { value: "computers", label: "Computers & Laptops", points: 50 },
   { value: "phones", label: "Mobile Phones & Tablets", points: 25 },
@@ -35,142 +41,121 @@ export const wasteTypes: WasteTypeOption[] = [
   { value: "other", label: "Other Electronics", points: 15 },
 ];
 
+/* -----------------------------------------
+   HOOK
+------------------------------------------ */
+
 export const usePickupFormSubmit = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { user, refreshProfile } = useSupabase();
   const navigate = useNavigate();
 
-  const handleSubmit = async (data: PickupFormValues) => {
-    console.log("Form submitted with data:", data);
-    setIsSubmitting(true);
-    
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
+
+
+  /* -----------------------------------------
+     GEOCODE FUNCTION
+  ------------------------------------------ */
+
+  const getLatLongFromAddress = async (address: string) => {
     try {
-      // Format the date for storage
-      const formattedDate = format(data.pickupDate, "yyyy-MM-dd");
-      
-      // Get the waste type points
-      const selectedWasteType = wasteTypes.find(type => type.value === data.wasteType);
-      const pointsToAdd = selectedWasteType?.points || 15; // Default to 15 if not found
-      
-      if (user) {
-        // For authenticated users, directly use the authenticated user's ID
-        console.log("Creating pickup request for authenticated user:", user.id);
-        
-        // Store the pickup request in e_waste_requests table
-        const { data: requestData, error: requestError } = await supabase
-          .from('e_waste_requests')
-          .insert({
-            user_id: user.id,
-            waste_type: data.wasteType,
-            pickup_time: formattedDate,
-            status: 'pending',
-            address: data.address,
-            phone: data.phone,
-            description: data.description || ''
-          })
-          .select();
-        
-        console.log("Pickup request result:", { requestData, requestError });
-        
-        if (requestError) {
-          throw new Error("Error storing pickup request: " + requestError.message);
-        }
-        
-        // Ensure profile exists for the user (but don't award points yet)
-        try {
-          // Check if the user has a profile
-          const { data: profileCheck, error: profileCheckError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .maybeSingle();
-            
-          console.log("Profile check:", { profileCheck, profileCheckError });
-          
-          // If profile doesn't exist, create it without points (admin will award points when accepting)
-          if (!profileCheck && !profileCheckError) {
-            const { data: newProfile, error: createProfileError } = await supabase
-              .from('profiles')
-              .insert({
-                id: user.id,
-                first_name: user.user_metadata?.first_name || data.name.split(' ')[0] || '',
-                last_name: user.user_metadata?.last_name || data.name.split(' ')[1] || '',
-                email: user.email || data.email,
-                reward_points: 0 // Start with 0 points - admin will award when accepting
-              })
-              .select();
-              
-            console.log("New profile created:", { newProfile, createProfileError });
-            
-            if (createProfileError) {
-              console.error("Error creating profile:", createProfileError);
-            }
-          }
-          
-          // Refresh the profile data in the context
-          await refreshProfile();
-        } catch (profileErr) {
-          // Log but don't fail the whole operation
-          console.error("Profile update error:", profileErr);
-        }
-        
-        toast({
-          title: "Pickup Scheduled!",
-          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. You'll earn ${pointsToAdd} reward points when an admin accepts your request!`,
-        });
-      } else {
-        // For non-authenticated users, we need to store as a guest
-        console.log("Creating pickup request for guest user");
-        
-        // Store the guest information in the description field
-        const guestDescription = `Guest Request - Name: ${data.name}, Email: ${data.email}, ${data.description || ''}`;
-        
-        // Create pickup request without user_id for guest
-        const { data: requestData, error: requestError } = await supabase
-          .from('e_waste_requests')
-          .insert({
-            waste_type: data.wasteType,
-            pickup_time: formattedDate,
-            status: 'pending',
-            address: data.address,
-            phone: data.phone,
-            description: guestDescription
-          })
-          .select();
-        
-        console.log("Guest pickup request result:", { requestData, requestError });
-        
-        if (requestError) {
-          throw new Error("Error storing pickup request: " + requestError.message);
-        }
-        
-        toast({
-          title: "Pickup Scheduled!",
-          description: `Your e-waste pickup has been scheduled for ${format(data.pickupDate, "PPP")}. Create an account to earn reward points!`,
-        });
-        
-        // Suggest creating an account
-        setTimeout(() => {
-          toast({
-            title: "Create an Account",
-            description: "Sign up to track your pickups and earn reward points!",
-            action: <Button onClick={() => navigate('/register')} size="sm">Sign Up</Button>
-          });
-        }, 2000);
+      const response = await fetch(
+        `${BACKEND_URL}/geocode?address=${encodeURIComponent(address)}`
+      );
+
+      if (!response.ok) {
+        console.error("Geocode API failed:", response.status);
+        return null;
       }
-      
+
+      const data = await response.json();
+
+      if (!data || data.latitude == null || data.longitude == null) {
+        return null;
+      }
+
+      return {
+        latitude: Number(data.latitude),
+        longitude: Number(data.longitude),
+      };
+    } catch (error) {
+      console.error("Geocoding error:", error);
+      return null;
+    }
+  };
+
+  /* -----------------------------------------
+     SUBMIT HANDLER
+  ------------------------------------------ */
+
+  const handleSubmit = async (data: PickupFormValues) => {
+    setIsSubmitting(true);
+
+    try {
+      const formattedDate = format(data.pickupDate, "yyyy-MM-dd");
+
+      const selectedWasteType = wasteTypes.find(
+        (type) => type.value === data.wasteType
+      );
+
+      const pointsToAdd = selectedWasteType?.points ?? 15;
+
+      // 🔥 STRICT GEOCODE BLOCK
+      // 🔥 CALL GEOCODE
+const coordinates = await getLatLongFromAddress(data.address);
+
+console.log("Coordinates:", coordinates);
+
+// ⛔ HARD BLOCK if geocode fails
+if (!coordinates || coordinates.latitude == null || coordinates.longitude == null) {
+  toast({
+    title: "Invalid address",
+    description:
+      "Could not locate this address. Please enter full street name and area.",
+    variant: "destructive",
+  });
+  setIsSubmitting(false);
+  return { success: false };
+}
+
+      // 🔥 INSERT ONLY IF VALID COORDINATES
+      const { error } = await supabase.from("e_waste_requests").insert([
+        {
+          user_id: user?.id ?? null,
+          pickup_time: formattedDate,
+          waste_type: data.wasteType,
+          description: data.description ?? "",
+          address: data.address,
+          phone: data.phone ?? "",
+          status: "pending",
+          points_awarded: 0,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+        },
+      ] as any);
+
+      if (error) throw error;
+
+      toast({
+        title: "Pickup Scheduled!",
+        description: `Scheduled for ${format(
+          data.pickupDate,
+          "PPP"
+        )}. You'll earn ${pointsToAdd} points when approved.`,
+      });
+
       return { success: true };
     } catch (error: any) {
       console.error("Error scheduling pickup:", error);
-      
+
       toast({
         title: "Error scheduling pickup",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive"
+        description: error.message ?? "Something went wrong.",
+        variant: "destructive",
       });
-      
-      return { success: false, error };
+
+      return { success: false };
     } finally {
       setIsSubmitting(false);
     }
