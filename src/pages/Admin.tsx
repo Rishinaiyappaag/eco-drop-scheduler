@@ -300,7 +300,7 @@ const Admin = () => {
       <h2 className="text-2xl font-bold text-green-600 mb-4">
         🤖 AI Cluster Analysis
       </h2>
-      <HotspotMap clusters={clusterCenters} />
+      <HotspotMap clusters={clusterCenters as [number, number][]} />
     </div>
 
     {/* AI Route Optimizer */}

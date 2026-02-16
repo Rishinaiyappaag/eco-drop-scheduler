@@ -1,7 +1,7 @@
 import {
   MapContainer,
   TileLayer,
-  CircleMarker,
+  Marker,
   Popup,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -32,17 +32,15 @@ const HotspotMap = ({ clusters }: Props) => {
 
         {clusters &&
           clusters.map((center, index) => (
-            <CircleMarker
+            <Marker
               key={index}
-              center={center}
-              radius={18}
-              pathOptions={{ color: "purple", fillOpacity: 0.5 }}
+              position={center}
             >
               <Popup>
                 Hotspot {index + 1} <br />
                 {center[0].toFixed(4)}, {center[1].toFixed(4)}
               </Popup>
-            </CircleMarker>
+            </Marker>
           ))}
       </MapContainer>
 

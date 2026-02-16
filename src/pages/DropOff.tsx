@@ -15,11 +15,11 @@ import { useSupabase } from "@/lib/SupabaseProvider";
 import { useNavigate } from "react-router-dom";
 
 const DROP_OFF_LOCATIONS = [
-  { id: "elxion", name: "Elxion E-waste Recycling", address: "No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041", phone: "08026589066", hours: "Mon-Sat: 9AM-6PM", points: 10, mapLink: "https://maps.app.goo.gl/pJto51u8nYCbXGv89", website: "http://www.elxion.in/" },
-  { id: "ewaste-hub", name: "Ewaste Hub", address: "No 3, Oppo Hombegowda Ground, 10th Cross, Lakkasandra Extension, Wilson Garden, Bengaluru, Karnataka 560027", phone: "09066319066", hours: "Mon-Sun: 10AM-8PM", points: 15, mapLink: "https://maps.app.goo.gl/CDoobfs829xkZGx67" },
-  { id: "zolopik", name: "Zolopik", address: "58, 22nd Main Rd, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560078", phone: "09743440440", hours: "Tue-Sun: 8AM-7PM", points: 12, mapLink: "https://maps.app.goo.gl/uCts53vj1pb8xK9K6", website: "https://www.zolopik.com/" },
-  { id: "ecosphere", name: "Ecosphere Waste Solutions", address: "Flat No 201, Dhammanagi Zeus Apartment, Millers Tank Bund Rd, Vasanth Nagar, Bengaluru, Karnataka 560051", phone: "09035489496", hours: "Mon-Sat: 9AM-6PM", points: 10, mapLink: "https://maps.app.goo.gl/WZDHbsQxRJ7zpQXb6" },
-  { id: "saahas", name: "Saahas Waste Management Pvt Ltd", address: "32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076", phone: "18002586676", hours: "Mon-Sat: 9AM-6PM", points: 12, mapLink: "https://maps.app.goo.gl/Jse1YuQtTKPyaofYA", website: "https://saahaszerowaste.com/" },
+  { id: "elxion", name: "Elxion E-waste Recycling", address: "No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041", phone: "08026589066", hours: "Mon-Sat: 9AM-6PM", points: 10, mapLink: "https://maps.app.goo.gl/pJto51u8nYCbXGv89", website: "http://www.elxion.in/", lat: 12.9081, lng: 77.5856 },
+  { id: "ewaste-hub", name: "Ewaste Hub", address: "No 3, Oppo Hombegowda Ground, 10th Cross, Lakkasandra Extension, Wilson Garden, Bengaluru, Karnataka 560027", phone: "09066319066", hours: "Mon-Sun: 10AM-8PM", points: 15, mapLink: "https://maps.app.goo.gl/CDoobfs829xkZGx67", lat: 12.9400, lng: 77.5950 },
+  { id: "zolopik", name: "Zolopik", address: "58, 22nd Main Rd, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560078", phone: "09743440440", hours: "Tue-Sun: 8AM-7PM", points: 12, mapLink: "https://maps.app.goo.gl/uCts53vj1pb8xK9K6", website: "https://www.zolopik.com/", lat: 12.9082, lng: 77.5830 },
+  { id: "ecosphere", name: "Ecosphere Waste Solutions", address: "Flat No 201, Dhammanagi Zeus Apartment, Millers Tank Bund Rd, Vasanth Nagar, Bengaluru, Karnataka 560051", phone: "09035489496", hours: "Mon-Sat: 9AM-6PM", points: 10, mapLink: "https://maps.app.goo.gl/WZDHbsQxRJ7zpQXb6", lat: 12.9850, lng: 77.5870 },
+  { id: "saahas", name: "Saahas Waste Management Pvt Ltd", address: "32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076", phone: "18002586676", hours: "Mon-Sat: 9AM-6PM", points: 12, mapLink: "https://maps.app.goo.gl/Jse1YuQtTKPyaofYA", website: "https://saahaszerowaste.com/", lat: 12.9165, lng: 77.6101 },
 ];
 
 const WASTE_TYPES = [
@@ -69,6 +69,8 @@ const DropOff = () => {
         points_awarded: 0,
         request_type: "dropoff",
         drop_off_location: location.name,
+        latitude: location.lat,
+        longitude: location.lng,
       }] as any);
 
       if (error) throw error;
