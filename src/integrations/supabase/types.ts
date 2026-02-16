@@ -52,12 +52,14 @@ export type Database = {
           address: string
           created_at: string
           description: string | null
+          drop_off_location: string | null
           id: string
           latitude: number | null
           longitude: number | null
           phone: string
           pickup_time: string
           points_awarded: number | null
+          request_type: string
           status: Database["public"]["Enums"]["order_status"]
           status_history: Json | null
           updated_at: string
@@ -68,12 +70,14 @@ export type Database = {
           address: string
           created_at?: string
           description?: string | null
+          drop_off_location?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           phone: string
           pickup_time: string
           points_awarded?: number | null
+          request_type?: string
           status?: Database["public"]["Enums"]["order_status"]
           status_history?: Json | null
           updated_at?: string
@@ -84,12 +88,14 @@ export type Database = {
           address?: string
           created_at?: string
           description?: string | null
+          drop_off_location?: string | null
           id?: string
           latitude?: number | null
           longitude?: number | null
           phone?: string
           pickup_time?: string
           points_awarded?: number | null
+          request_type?: string
           status?: Database["public"]["Enums"]["order_status"]
           status_history?: Json | null
           updated_at?: string

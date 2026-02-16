@@ -93,7 +93,7 @@ export const useAdminData = (isAdmin: boolean) => {
         months[monthYear] = { pickups: 0, dropoffs: 0 };
       }
       
-      if (item.address && item.address.includes('Drop-off')) {
+      if (item.request_type === 'dropoff') {
         months[monthYear].dropoffs += 1;
       } else {
         months[monthYear].pickups += 1;
@@ -145,6 +145,8 @@ export const useAdminData = (isAdmin: boolean) => {
           phone,
           description,
           points_awarded,
+          request_type,
+          drop_off_location,
           profiles!left(first_name, last_name, email, reward_points)
         `)
         .order('created_at', { ascending: false });
@@ -169,7 +171,7 @@ export const useAdminData = (isAdmin: boolean) => {
             email: profile?.email || "No email",
             date: new Date(order.created_at).toLocaleDateString(),
             items: order.waste_type || "Unknown",
-            type: order.address && order.address.includes('Drop-off') ? "Drop-off" : "Pickup",
+            type: (order as any).request_type === 'dropoff' ? "Drop-off" : "Pickup",
             status: order.status || "pending",
             points: profile?.reward_points || 0,
             phone: order.phone || "No phone",
@@ -198,7 +200,7 @@ export const useAdminData = (isAdmin: boolean) => {
     try {
       const { data, error } = await supabase
         .from('e_waste_requests')
-        .select('status, address');
+        .select('status, request_type');
 
       if (error) throw error;
 
@@ -207,8 +209,8 @@ export const useAdminData = (isAdmin: boolean) => {
         completedOrders: data.filter(order => order.status.toLowerCase() === 'completed').length,
         pendingOrders: data.filter(order => order.status.toLowerCase() === 'pending').length,
         totalPoints: 0,
-        pickupOrders: data.filter(order => !order.address.includes('Drop-off')).length,
-        dropOffOrders: data.filter(order => order.address.includes('Drop-off')).length
+        pickupOrders: data.filter((order: any) => order.request_type !== 'dropoff').length,
+        dropOffOrders: data.filter((order: any) => order.request_type === 'dropoff').length
       };
 
       const { data: profilesData, error: profilesError } = await supabase
@@ -232,7 +234,7 @@ export const useAdminData = (isAdmin: boolean) => {
     try {
       const { data, error } = await supabase
         .from('e_waste_requests')
-        .select('created_at, address')
+        .select('created_at, request_type')
         .order('created_at', { ascending: true });
 
       if (error) throw error;
