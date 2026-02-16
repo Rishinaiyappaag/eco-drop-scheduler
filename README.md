@@ -1,95 +1,270 @@
-# 🚀 Eco Drop Scheduler
+# 🚀 Eco Drop Scheduler (AI-Powered)
 
 ## 📘 Project Overview
 
-Eco Drop Scheduler is a modern web application designed to manage e-waste collection scheduling efficiently.
-It is built with a high-performance frontend stack focused on speed, scalability, and clean UI design. <br>
+Eco Drop Scheduler is a full-stack AI-powered web application designed to manage e-waste collection scheduling efficiently and intelligently.
 
-This project uses Vite, React, TypeScript, Tailwind CSS, and shadcn-ui to ensure fast development,
-type safety, and reusable UI components.
+It allows users to schedule pickups and enables administrators to optimize operations using Artificial Intelligence.
 
-Repository:
+### 🔥 Key AI Capabilities
+- 📈 Demand Prediction
+- 📍 Pickup Hotspot Clustering
+- 🚛 AI Route Optimization
+- 🌱 Carbon Emission Optimization
+- 🧠 LLM-Based Strategy Recommendations
+
+This system combines a modern React frontend with a FastAPI-based AI backend.
+
+---
+
+# 🔗 Repository
+
 https://github.com/Rishinaiyappaag/eco-drop-scheduler.git
 
 ---
 
-## 🧩 Tech Stack
+# 🧩 Tech Stack
 
-⚡ Vite – Next-generation frontend tooling with instant dev server and optimized builds  
-⚛️ React – Declarative UI library for building interactive user interfaces  
-🧠 TypeScript – Strongly typed JavaScript for better reliability and maintainability  
-🎨 Tailwind CSS – Utility-first CSS framework for responsive design  
-🧱 shadcn-ui – Customizable UI components built using Radix UI and Tailwind CSS  
+## 🌐 Frontend
+
+- ⚡ Vite – Fast build tool
+- ⚛️ React – UI library
+- 🧠 TypeScript – Type safety
+- 🎨 Tailwind CSS – Styling
+- 🧱 shadcn-ui – UI components
+- 🗺️ Leaflet – Interactive maps
+- 📊 Recharts – Data visualization
+- 🗃️ Supabase – Database & Auth
 
 ---
 
-## 🛠️ Getting Started
+## 🤖 Backend / AI
 
-1️⃣ Clone the Repository  
+- 🐍 FastAPI – Python backend
+- 📊 Custom ML Model – Demand prediction
+- 📍 K-Means Clustering – Hotspot detection
+- 🚛 Nearest Neighbor Algorithm – Route optimization
+- 🌱 Carbon Emission Calculator
+- 🧠 Ollama + LLaMA3 – AI strategy engine
+- 🌍 OpenCage API – Geocoding
+
+---
+
+# 🧠 AI Features Explained
+
+## 1️⃣ Demand Prediction
+Forecasts upcoming pickup demand based on historical data.
+
+## 2️⃣ AI Hotspot Clustering
+Groups nearby pickup locations to detect high-demand zones.
+
+## 3️⃣ Route Optimization
+Optimizes pickup routes to:
+- Reduce travel distance
+- Reduce CO₂ emissions
+- Improve operational efficiency
+
+## 4️⃣ Carbon Savings Tracker
+Calculates:
+- Naive route emissions
+- Optimized route emissions
+- Carbon saved (kg)
+- Efficiency percentage
+
+Stores daily results in `carbon_history` table.
+
+## 5️⃣ AI Strategy Generator
+Uses LLaMA3 (via Ollama) to generate:
+- Vehicle deployment strategy
+- Emission reduction suggestions
+- Operational improvements
+
+---
+
+# 🏗️ System Architecture
+
+Frontend (React + Vite)
+        ↓
+FastAPI AI Backend
+        ↓
+Supabase Database
+
+---
+
+# 🛠️ Getting Started
+
+## 1️⃣ Clone the Repository
+
+```bash
 git clone https://github.com/Rishinaiyappaag/eco-drop-scheduler.git
-
-2️⃣ Navigate to the Project Directory  
 cd eco-drop-scheduler
 
-3️⃣ Install Dependencies  
 
-Make sure Node.js and npm are installed.
-You can use nvm to manage Node versions if needed.
-
+🔹 Frontend Setup
+Install Dependencies
 npm install
 
-4️⃣ Start the Development Server  
+Create .env File
+Create a .env file in root:
+VITE_BACKEND_URL=http://127.0.0.1:8000
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_key
 
-Run the application locally with hot reload:
-
+Run Frontend
 npm run dev
 
-The application will be available at:
+App runs at:
 http://localhost:5173/
 
----
 
-## 🧑‍💻 Editing the Code
+🔹 Backend Setup (AI Engine)
+Navigate to backend:
+cd src/ml-backend
 
-You can use any IDE or code editor such as VS Code, WebStorm, or Sublime Text.
+Create Virtual Environment
+python -m venv venv
 
-To customize the project:
-- Edit files inside the src directory
-- Save changes to see live updates in the browser
+Activate:
+Windows:
+venv\Scripts\activate
 
----
+Mac/Linux:
+source venv/bin/activate
 
-## 🧾 Project Structure
+Install Requirements
+pip install -r requirements.txt
 
+Run Backend
+uvicorn main:app --reload
+
+Backend runs at:
+http://127.0.0.1:8000
+
+Swagger Docs:
+http://127.0.0.1:8000/docs
+
+
+🗃️ Database Tables (Supabase)
+e_waste_requests
+Stores pickup data:
+
+
+address
+
+
+latitude
+
+
+longitude
+
+
+pickup_time
+
+
+status
+
+
+carbon_history
+Stores carbon optimization data:
+
+
+date
+
+
+naive_distance_km
+
+
+optimized_distance_km
+
+
+naive_co2_kg
+
+
+optimized_co2_kg
+
+
+carbon_saved_kg
+
+
+
+📁 Project Structure
 ├── src/
-│   ├── components/        Reusable UI components <br>
-│   ├── pages/             Application pages <br>
-│   ├── assets/            Images icons fonts <br>
-│   ├── App.tsx            Root component <br>
-│   └── main.tsx           Application entry point <br>
+│   ├── ai/
+│   ├── components/
+│   │   ├── admin/
+│   │   │   ├── CarbonTrendChart.tsx
+│   │   │   ├── HotspotMap.tsx
+│   │   │   └── RouteOptimizerMap.tsx
+│   ├── hooks/
+│   ├── pages/
+│   └── integrations/
 │
-├── public/                Public static assets <br>
-├── index.html             Base HTML template <br>
-├── tailwind.config.js     Tailwind CSS configuration <br>
-├── tsconfig.json          TypeScript configuration <br>
-└── package.json           Project dependencies and scripts <br>
+├── src/ml-backend/
+│   ├── main.py
+│   ├── model.py
+│   ├── clustering.py
+│   ├── carbon_optimizer.py
+│   ├── strategy_engine.py
+│   └── requirements.txt
+│
+├── public/
+├── package.json
+└── README.md
 
----
 
-## 💡 Useful Commands
+💡 Useful Commands
+Frontend:
+npm run dev
+npm run build
+npm run preview
+npm run lint
 
-npm run dev       Start the local development server  
-npm run build     Create an optimized production build  
-npm run preview   Preview the production build locally  
-npm run lint      Run ESLint to check for issues  
+Backend:
+uvicorn main:app --reload
 
----
 
-## 📌 Notes
+🌍 API Endpoints
+EndpointDescription/predictDemand forecasting + clustering/optimize-carbonRoute + carbon optimization/strategyAI deployment strategy/geocodeAddress → Latitude/Longitude
 
-- Built using modern frontend best practices
-- Fully responsive UI using Tailwind CSS
-- Clean and scalable project structure
-- Easy to extend with backend services like Supabase
+📊 Admin Dashboard Features
 
+
+Real-time order stats
+
+
+AI demand forecast
+
+
+Carbon savings trend
+
+
+Hotspot cluster map
+
+
+Optimized route map
+
+
+AI strategy recommendation
+
+
+
+🔐 Security Notes
+
+
+.env is excluded from Git
+
+
+Never push API keys
+
+
+Keep Supabase credentials secure
+
+
+
+
+
+
+## 👨‍💻 Author
+Rishin Aiyappa
+AI & ML Engineer | Full Stack Developer
 
