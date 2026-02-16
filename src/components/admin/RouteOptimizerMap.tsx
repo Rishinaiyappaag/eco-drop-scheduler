@@ -3,7 +3,6 @@ import {
   TileLayer,
   Marker,
   Popup,
-  Polyline,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -42,10 +41,7 @@ const RouteOptimizerMap = ({ locations }: Props) => {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Draw Route if multiple stops */}
-        {locations.length >= 2 && (
-          <Polyline positions={locations} color="green" />
-        )}
+        {/* Markers connected visually */}
 
         {/* Markers */}
         {locations.map((loc, index) => (
