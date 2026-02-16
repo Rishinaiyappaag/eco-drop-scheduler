@@ -1,4 +1,3 @@
-
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import MapSection from "@/components/MapSection";
@@ -19,25 +18,30 @@ const DropOff = () => {
               Locate certified e-waste recycling centers near you.
             </p>
           </div>
-          
+
           <div className="space-y-8">
-            {/* Use MapSection instead of Google Maps iframe */}
             <div className="h-96 rounded-lg overflow-hidden shadow-md">
               <MapSection />
             </div>
-            
-            {/* Ecodrop Hotspots List */}
+
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-6">
                 Ecodrop Hotspots in this Area
               </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                {/* Elxion */}
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     <div className="bg-primary-100 p-4 relative">
                       <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
-                      <h3 className="font-semibold text-lg text-primary-800">Elxion E-waste Recycling</h3>
-                      <p className="text-sm text-gray-700">No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041</p>
+                      <h3 className="font-semibold text-lg text-primary-800">
+                        Elxion E-waste Recycling
+                      </h3>
+                      <p className="text-sm text-gray-700">
+                        No 24, 23rd A Main Rd, R.K Colony, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560041
+                      </p>
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -48,18 +52,40 @@ const DropOff = () => {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <p className="text-sm text-gray-600">08026589066</p>
                       </div>
-                      <a href="http://www.elxion.in/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline block">Visit Website</a>
-                      <p className="text-sm text-emerald-600 mt-2 font-medium">10 reward points per visit</p>
+                      <a
+                        href="https://maps.app.goo.gl/pJto51u8nYCbXGv89"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline block font-medium"
+                      >
+                        View on Google Maps
+                      </a>
+                      <a
+                        href="http://www.elxion.in/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline block"
+                      >
+                        Visit Website
+                      </a>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">
+                        10 reward points per visit
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
+                {/* Ewaste Hub */}
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     <div className="bg-primary-100 p-4 relative">
                       <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
-                      <h3 className="font-semibold text-lg text-primary-800">Ewaste Hub</h3>
-                      <p className="text-sm text-gray-700">No 3, Oppo Hombegowda Ground, 10th Cross, Lakkasandra Extension, Wilson Garden, Bengaluru, Karnataka 560027</p>
+                      <h3 className="font-semibold text-lg text-primary-800">
+                        Ewaste Hub
+                      </h3>
+                      <p className="text-sm text-gray-700">
+                        No 3, Oppo Hombegowda Ground, 10th Cross, Lakkasandra Extension, Wilson Garden, Bengaluru, Karnataka 560027
+                      </p>
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -70,17 +96,32 @@ const DropOff = () => {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <p className="text-sm text-gray-600">09066319066</p>
                       </div>
-                      <p className="text-sm text-emerald-600 mt-2 font-medium">15 reward points per visit</p>
+                      <a
+                        href="https://maps.app.goo.gl/CDoobfs829xkZGx67"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline block font-medium"
+                      >
+                        View on Google Maps
+                      </a>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">
+                        15 reward points per visit
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
+                {/* Zolopik */}
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     <div className="bg-primary-100 p-4 relative">
                       <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
-                      <h3 className="font-semibold text-lg text-primary-800">Zolopik</h3>
-                      <p className="text-sm text-gray-700">58, 22nd Main Rd, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560078</p>
+                      <h3 className="font-semibold text-lg text-primary-800">
+                        Zolopik
+                      </h3>
+                      <p className="text-sm text-gray-700">
+                        58, 22nd Main Rd, Marenahalli, 2nd Phase, J. P. Nagar, Bengaluru, Karnataka 560078
+                      </p>
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -91,18 +132,40 @@ const DropOff = () => {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <p className="text-sm text-gray-600">09743440440</p>
                       </div>
-                      <a href="https://www.zolopik.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline block">Visit Website</a>
-                      <p className="text-sm text-emerald-600 mt-2 font-medium">12 reward points per visit</p>
+                      <a
+                        href="https://maps.app.goo.gl/uCts53vj1pb8xK9K6"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline block font-medium"
+                      >
+                        View on Google Maps
+                      </a>
+                      <a
+                        href="https://www.zolopik.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline block"
+                      >
+                        Visit Website
+                      </a>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">
+                        12 reward points per visit
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
+                {/* Ecosphere */}
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     <div className="bg-primary-100 p-4 relative">
                       <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
-                      <h3 className="font-semibold text-lg text-primary-800">Ecosphere Waste Solutions</h3>
-                      <p className="text-sm text-gray-700">Flat No 201, Dhammanagi Zeus Apartment, Millers Tank Bund Rd, Vasanth Nagar, Bengaluru, Karnataka 560051</p>
+                      <h3 className="font-semibold text-lg text-primary-800">
+                        Ecosphere Waste Solutions
+                      </h3>
+                      <p className="text-sm text-gray-700">
+                        Flat No 201, Dhammanagi Zeus Apartment, Millers Tank Bund Rd, Vasanth Nagar, Bengaluru, Karnataka 560051
+                      </p>
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -113,17 +176,32 @@ const DropOff = () => {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <p className="text-sm text-gray-600">09035489496</p>
                       </div>
-                      <p className="text-sm text-emerald-600 mt-2 font-medium">10 reward points per visit</p>
+                      <a
+                        href="https://maps.app.goo.gl/WZDHbsQxRJ7zpQXb6"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline block font-medium"
+                      >
+                        View on Google Maps
+                      </a>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">
+                        10 reward points per visit
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
-                
+
+                {/* Saahas */}
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow">
                   <CardContent className="p-0">
                     <div className="bg-primary-100 p-4 relative">
                       <MapPin className="text-primary w-8 h-8 absolute right-4 top-4" />
-                      <h3 className="font-semibold text-lg text-primary-800">Saahas Waste Management Pvt Ltd</h3>
-                      <p className="text-sm text-gray-700">32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076</p>
+                      <h3 className="font-semibold text-lg text-primary-800">
+                        Saahas Waste Management Pvt Ltd
+                      </h3>
+                      <p className="text-sm text-gray-700">
+                        32, 5th B Cross, 16th Main Rd, MCHS Colony, Stage 2, BTM Layout, Bengaluru, Karnataka 560076
+                      </p>
                     </div>
                     <div className="p-4 space-y-2">
                       <div className="flex items-center gap-2">
@@ -134,53 +212,85 @@ const DropOff = () => {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <p className="text-sm text-gray-600">18002586676</p>
                       </div>
-                      <a href="https://saahaszerowaste.com/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline block">Visit Website</a>
-                      <p className="text-sm text-emerald-600 mt-2 font-medium">12 reward points per visit</p>
+                      <a
+                        href="https://maps.app.goo.gl/Jse1YuQtTKPyaofYA"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline block font-medium"
+                      >
+                        View on Google Maps
+                      </a>
+                      <a
+                        href="https://saahaszerowaste.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline block"
+                      >
+                        Visit Website
+                      </a>
+                      <p className="text-sm text-emerald-600 mt-2 font-medium">
+                        12 reward points per visit
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
+
               </div>
             </div>
           </div>
 
+          {/* WHAT TO EXPECT SECTION */}
           <div className="mt-8 max-w-3xl mx-auto">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
               What to Expect at Drop-off Centers
             </h2>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Accepted Items</h3>
-                  <p className="mt-2 text-gray-600">
-                    Most centers accept computers, laptops, monitors, TVs, mobile phones, 
-                    tablets, printers, scanners, keyboards, mice, cables, batteries, and 
-                    small household electronics.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">What to Bring</h3>
-                  <p className="mt-2 text-gray-600">
-                    Bring your ID and the e-waste items. Some centers may require proof of 
-                    residence if they serve specific communities or districts.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Data Security</h3>
-                  <p className="mt-2 text-gray-600">
-                    It's recommended to wipe personal data from devices before recycling. 
-                    Many centers offer data destruction services for added security.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">Earning Rewards</h3>
-                  <p className="mt-2 text-gray-600">
-                    Don't forget to register your drop-off with our app to earn reward points! 
-                    Show the center staff your app or enter the drop-off code to claim your points.
-                  </p>
-                </div>
+            <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
+
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Accepted Items
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Most centers accept computers, laptops, monitors, TVs, mobile phones,
+                  tablets, printers, scanners, keyboards, mice, cables, batteries,
+                  and small household electronics.
+                </p>
               </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  What to Bring
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Bring your ID and the e-waste items. Some centers may require proof
+                  of residence if they serve specific communities or districts.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Data Security
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  It's recommended to wipe personal data from devices before recycling.
+                  Many centers offer data destruction services for added security.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Earning Rewards
+                </h3>
+                <p className="mt-2 text-gray-600">
+                  Don't forget to register your drop-off with our app to earn reward
+                  points! Show the center staff your app or enter the drop-off code
+                  to claim your points.
+                </p>
+              </div>
+
             </div>
           </div>
+
         </div>
       </main>
       <Footer />
