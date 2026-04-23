@@ -45,16 +45,21 @@ const Admin = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [clusterCenters, setClusterCenters] = useState<number[][]>([]);
+  const [clusterPoints, setClusterPoints] = useState<number[][]>([]);
+  const [clusterLabels, setClusterLabels] = useState<number[]>([]);
   const [routeLocations, setRouteLocations] = useState<number[][]>([]);
   const [predictedDemand, setPredictedDemand] = useState(0);
   const [clusterCount, setClusterCount] = useState(0);
   const [carbonSaved, setCarbonSaved] = useState(0);
   const [carbonEfficiency, setCarbonEfficiency] = useState(0);
+  const [naiveCo2, setNaiveCo2] = useState(0);
+  const [optimizedCo2, setOptimizedCo2] = useState(0);
 
   const [strategyText, setStrategyText] = useState("");
   const [isStrategyLoading, setIsStrategyLoading] = useState(false);
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -136,34 +141,52 @@ const Admin = () => {
     }
   };
 
+  /* ---------------- BACKEND HEALTH CHECK ---------------- */
+
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/predict`, { signal: AbortSignal.timeout(3000) });
+        setBackendOnline(res.ok);
+      } catch {
+        setBackendOnline(false);
+      }
+    };
+    checkBackend();
+  }, []);
+
   /* ---------------- FETCH AI DATA ---------------- */
 
   useEffect(() => {
     const fetchAIData = async () => {
       try {
         const predictRes = await fetch(`${BACKEND_URL}/predict`);
+        if (!predictRes.ok) throw new Error("predict failed");
         const predictData = await predictRes.json();
 
         setPredictedDemand(predictData.predicted_orders || 0);
         setClusterCount(predictData.cluster_count || 0);
         setClusterCenters(predictData.cluster_centers || []);
+        setClusterPoints(predictData.cluster_points || []);
+        setClusterLabels(predictData.cluster_labels || []);
 
         const carbonRes = await fetch(`${BACKEND_URL}/optimize-carbon`);
+        if (!carbonRes.ok) throw new Error("carbon failed");
         const carbonData = await carbonRes.json();
 
         setRouteLocations(carbonData.locations || []);
         setCarbonSaved(carbonData.carbon_saved_kg || 0);
         setCarbonEfficiency(carbonData.carbon_efficiency || 0);
-
-        console.log("AI Data Loaded:", predictData, carbonData);
+        setNaiveCo2(carbonData.naive_co2_kg || 0);
+        setOptimizedCo2(carbonData.optimized_co2_kg || 0);
+        setBackendOnline(true);
       } catch (err) {
         console.error("AI Dashboard error:", err);
+        setBackendOnline(false);
       }
     };
 
-    if (orders.length > 0) {
-      fetchAIData();
-    }
+    fetchAIData();
   }, [orders]);
 
   /* ---------------- REFRESH ---------------- */
@@ -198,9 +221,28 @@ const Admin = () => {
       <main className="flex-grow pt-20 pb-12 px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
 
-          <h1 className="text-3xl font-bold mb-6">
+          <h1 className="text-3xl font-bold mb-4">
             Admin Dashboard
           </h1>
+
+          {/* Backend status banner */}
+          {backendOnline === false && (
+            <div className="mb-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+              <span>
+                <strong>AI backend offline.</strong> Start it with:{" "}
+                <code className="bg-red-100 px-1 rounded">
+                  cd src/ml-backend &amp;&amp; venv\Scripts\activate &amp;&amp; uvicorn main:app --reload
+                </code>
+              </span>
+            </div>
+          )}
+          {backendOnline === true && (
+            <div className="mb-4 px-4 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+              AI backend online
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-4 mb-8">
 
@@ -280,8 +322,8 @@ const Admin = () => {
                   total_pickups: routeLocations.length,
                   naive_distance_km: 0,
                   optimized_distance_km: 0,
-                  naive_co2_kg: 0,
-                  optimized_co2_kg: 0,
+                  naive_co2_kg: naiveCo2,
+                  optimized_co2_kg: optimizedCo2,
                   carbon_saved_kg: carbonSaved
                 }}
                 clusterCount={clusterCount}
@@ -300,7 +342,11 @@ const Admin = () => {
       <h2 className="text-2xl font-bold text-green-600 mb-4">
         🤖 AI Cluster Analysis
       </h2>
-      <HotspotMap clusters={clusterCenters as [number, number][]} />
+      <HotspotMap
+        clusters={clusterCenters as [number, number][]}
+        points={clusterPoints as [number, number][]}
+        labels={clusterLabels}
+      />
     </div>
 
     {/* AI Route Optimizer */}

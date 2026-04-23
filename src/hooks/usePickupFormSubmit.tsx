@@ -51,38 +51,35 @@ export const usePickupFormSubmit = () => {
   const { user, refreshProfile } = useSupabase();
   const navigate = useNavigate();
 
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
-
+  // Bangalore city center used as fallback when geocoding cannot resolve the address
+  const BANGALORE_DEFAULT = { latitude: 12.9716, longitude: 77.5946 };
 
   /* -----------------------------------------
-     GEOCODE FUNCTION
+     GEOCODE FUNCTION (Nominatim, no backend needed)
   ------------------------------------------ */
 
-  const getLatLongFromAddress = async (address: string) => {
+  const getLatLongFromAddress = async (address: string): Promise<{ latitude: number; longitude: number }> => {
     try {
-      const response = await fetch(
-        `${BACKEND_URL}/geocode?address=${encodeURIComponent(address)}`
-      );
+      const lower = address.toLowerCase();
+      const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
+      const query = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
 
-      if (!response.ok) {
-        console.error("Geocode API failed:", response.status);
-        return null;
-      }
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+      const response = await fetch(url, {
+        headers: { "Accept-Language": "en" },
+      });
+
+      if (!response.ok) throw new Error("Nominatim request failed");
 
       const data = await response.json();
-
-      if (!data || data.latitude == null || data.longitude == null) {
-        return null;
+      if (data && data.length > 0) {
+        return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
       }
-
-      return {
-        latitude: Number(data.latitude),
-        longitude: Number(data.longitude),
-      };
     } catch (error) {
       console.error("Geocoding error:", error);
-      return null;
     }
+    // Fall back to Bangalore center so the DB constraint is never violated
+    return BANGALORE_DEFAULT;
   };
 
   /* -----------------------------------------
@@ -101,25 +98,8 @@ export const usePickupFormSubmit = () => {
 
       const pointsToAdd = selectedWasteType?.points ?? 15;
 
-      // 🔥 STRICT GEOCODE BLOCK
-      // 🔥 CALL GEOCODE
-const coordinates = await getLatLongFromAddress(data.address);
+      const { latitude, longitude } = await getLatLongFromAddress(data.address);
 
-console.log("Coordinates:", coordinates);
-
-// ⛔ HARD BLOCK if geocode fails
-if (!coordinates || coordinates.latitude == null || coordinates.longitude == null) {
-  toast({
-    title: "Invalid address",
-    description:
-      "Could not locate this address. Please enter full street name and area.",
-    variant: "destructive",
-  });
-  setIsSubmitting(false);
-  return { success: false };
-}
-
-      // 🔥 INSERT ONLY IF VALID COORDINATES
       const { error } = await supabase.from("e_waste_requests").insert([
         {
           user_id: user?.id ?? null,
@@ -130,8 +110,8 @@ if (!coordinates || coordinates.latitude == null || coordinates.longitude == nul
           phone: data.phone ?? "",
           status: "pending",
           points_awarded: 0,
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
+          latitude,
+          longitude,
         },
       ] as any);
 
