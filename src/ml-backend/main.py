@@ -314,6 +314,67 @@ def geocode_nominatim(full_address: str):
         print(f"Nominatim error: {e}")
     return None
 
+def resolve_address(address: str):
+    """Try multiple geocoding strategies, progressively simplifying the address."""
+    lower = address.lower()
+    has_city = any(x in lower for x in ["bangalore", "bengaluru", "karnataka"])
+    with_city = address if has_city else f"{address}, Bangalore, Karnataka, India"
+
+    # 1. Full address
+    result = geocode_opencage(with_city) or geocode_nominatim(with_city)
+    if result:
+        return result["latitude"], result["longitude"]
+
+    # 2. Strip leading building/flat number
+    import re
+    stripped = re.sub(r'^[\w/\-]+,\s*', '', address)
+    if stripped != address:
+        stripped_query = stripped if has_city else f"{stripped}, Bangalore, Karnataka, India"
+        result = geocode_opencage(stripped_query) or geocode_nominatim(stripped_query)
+        if result:
+            return result["latitude"], result["longitude"]
+
+    # 3. Use only the area/locality parts (drop building number + pincode)
+    parts = [p.strip() for p in address.split(",") if p.strip()]
+    area_parts = [p for p in parts[1:] if not re.match(r'^\d{6}$', p.strip())]
+    if area_parts:
+        area_query = ", ".join(area_parts) + ", Bangalore, Karnataka, India"
+        result = geocode_opencage(area_query) or geocode_nominatim(area_query)
+        if result:
+            return result["latitude"], result["longitude"]
+
+    # Last resort: Bangalore city center
+    return 12.9716, 77.5946
+
+def backfill_null_coordinates():
+    """Geocode any pending/accepted orders that have null coordinates."""
+    try:
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/e_waste_requests"
+            f"?status=in.(pending,accepted)&latitude=is.null&select=id,address",
+            headers=HEADERS,
+        )
+        if response.status_code != 200:
+            return
+        orders = response.json()
+        for order in orders:
+            if not order.get("address"):
+                continue
+            lat, lon = resolve_address(order["address"])
+            requests.patch(
+                f"{SUPABASE_URL}/rest/v1/e_waste_requests?id=eq.{order['id']}",
+                headers=HEADERS,
+                json={"latitude": lat, "longitude": lon},
+            )
+            print(f"Backfilled coords for order {order['id']}: {lat}, {lon}")
+    except Exception as e:
+        print(f"Backfill error: {e}")
+
+@app.get("/fix-null-coords")
+def fix_null_coords():
+    backfill_null_coordinates()
+    return {"status": "done"}
+
 @app.get("/geocode")
 def geocode(address: str):
     lower = address.lower()

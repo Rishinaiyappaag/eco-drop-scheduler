@@ -51,34 +51,58 @@ export const usePickupFormSubmit = () => {
   const { user, refreshProfile } = useSupabase();
   const navigate = useNavigate();
 
-  // Bangalore city center used as fallback when geocoding cannot resolve the address
+  // Bangalore city center used as last-resort fallback
   const BANGALORE_DEFAULT = { latitude: 12.9716, longitude: 77.5946 };
 
   /* -----------------------------------------
-     GEOCODE FUNCTION (Nominatim, no backend needed)
+     GEOCODE FUNCTION (Nominatim, progressive simplification)
   ------------------------------------------ */
 
-  const getLatLongFromAddress = async (address: string): Promise<{ latitude: number; longitude: number }> => {
+  const nominatimQuery = async (query: string): Promise<{ latitude: number; longitude: number } | null> => {
     try {
-      const lower = address.toLowerCase();
-      const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
-      const query = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
-
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
-      const response = await fetch(url, {
-        headers: { "Accept-Language": "en" },
-      });
-
-      if (!response.ok) throw new Error("Nominatim request failed");
-
-      const data = await response.json();
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;
+      const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+      if (!res.ok) return null;
+      const data = await res.json();
       if (data && data.length > 0) {
         return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
       }
-    } catch (error) {
-      console.error("Geocoding error:", error);
+    } catch { /* ignore */ }
+    return null;
+  };
+
+  const getLatLongFromAddress = async (address: string): Promise<{ latitude: number; longitude: number }> => {
+    const lower = address.toLowerCase();
+    const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
+    const withCity = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
+
+    // 1. Try full address
+    let result = await nominatimQuery(withCity);
+    if (result) return result;
+
+    // 2. Strip leading building/flat number (e.g. "133/2B, BSM Extension..." → "BSM Extension...")
+    const stripped = address.replace(/^[\d/\-A-Za-z]+,\s*/, "");
+    if (stripped !== address) {
+      const strippedWithCity = hasCity ? stripped : `${stripped}, Bangalore, Karnataka, India`;
+      result = await nominatimQuery(strippedWithCity);
+      if (result) return result;
     }
-    // Fall back to Bangalore center so the DB constraint is never violated
+
+    // 3. Extract just locality/area: take last 2–3 comma-separated parts before the pincode
+    const parts = address.split(",").map(p => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      // Drop the first part (building) and last part if it's a pincode
+      const isPincode = (s: string) => /^\d{6}$/.test(s.trim());
+      const areaParts = parts.slice(1).filter(p => !isPincode(p));
+      if (areaParts.length > 0) {
+        const areaQuery = `${areaParts.join(", ")}, Bangalore, Karnataka, India`;
+        result = await nominatimQuery(areaQuery);
+        if (result) return result;
+      }
+    }
+
+    // 4. Last resort: Bangalore city center
+    console.warn("Geocoding fell back to Bangalore center for:", address);
     return BANGALORE_DEFAULT;
   };
 
