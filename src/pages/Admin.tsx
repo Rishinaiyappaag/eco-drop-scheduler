@@ -74,28 +74,45 @@ const Admin = () => {
     return null;
   };
 
+  const inBangalore = (r: { latitude: number; longitude: number }) =>
+    r.latitude >= 12.7 && r.latitude <= 13.2 && r.longitude >= 77.3 && r.longitude <= 77.8;
+
+  const isFallbackCoord = (r: { latitude: number; longitude: number }) =>
+    Math.abs(r.latitude - BANGALORE_DEFAULT.latitude) < 0.0001 &&
+    Math.abs(r.longitude - BANGALORE_DEFAULT.longitude) < 0.0001;
+
   const geocodeAddress = async (address: string) => {
+    const parts = address.split(",").map((p: string) => p.trim()).filter(Boolean);
+    const skip = new Set(["india", "karnataka", "bangalore", "bengaluru", ""]);
+
+    // Locality parts sorted longest-first — longer names are usually more specific localities
+    const localityParts = parts
+      .filter(p =>
+        !skip.has(p.toLowerCase()) &&
+        !/\d{6}/.test(p) &&
+        !/^[\d/\-]+$/.test(p)
+      )
+      .sort((a, b) => b.length - a.length);
+
+    // 1. Try each locality part individually (longest = most specific first)
+    for (const part of localityParts) {
+      const result = await nominatimQuery(`${part}, Bangalore, Karnataka, India`);
+      if (result && !isFallbackCoord(result) && inBangalore(result)) return result;
+    }
+
+    // 2. Try pincode
+    const pincodeMatch = address.match(/\b(\d{6})\b/);
+    if (pincodeMatch) {
+      const result = await nominatimQuery(`${pincodeMatch[1]}, Karnataka, India`);
+      if (result && inBangalore(result)) return result;
+    }
+
+    // 3. Try full address as last resort
     const lower = address.toLowerCase();
     const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
     const withCity = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
-
-    let result = await nominatimQuery(withCity);
-    if (result) return result;
-
-    const parts = address.split(",").map((p: string) => p.trim()).filter(Boolean);
-    if (parts.length > 1 && /^[\d/\-\w]+$/.test(parts[0])) {
-      const rest = parts.slice(1).join(", ");
-      result = await nominatimQuery(hasCity ? rest : `${rest}, Bangalore, Karnataka, India`);
-      if (result) return result;
-    }
-
-    const skip = new Set(["india", "karnataka", "bangalore", "bengaluru", ""]);
-    for (const part of parts) {
-      if (/\d{6}/.test(part)) continue;
-      if (skip.has(part.toLowerCase())) continue;
-      result = await nominatimQuery(`${part}, Bangalore, Karnataka, India`);
-      if (result && !(result.latitude === BANGALORE_DEFAULT.latitude && result.longitude === BANGALORE_DEFAULT.longitude)) return result;
-    }
+    const fullResult = await nominatimQuery(withCity);
+    if (fullResult && inBangalore(fullResult)) return fullResult;
 
     return BANGALORE_DEFAULT;
   };
@@ -103,35 +120,45 @@ const Admin = () => {
   const fixFallbackCoords = async () => {
     setIsFixingCoords(true);
     try {
-      const { data: stuckOrders } = await supabase
+      const { data: allOrders } = await supabase
         .from("e_waste_requests")
         .select("id, address, latitude, longitude")
         .in("status", ["pending", "accepted"]);
 
-      if (!stuckOrders) return;
-
-      const toFix = stuckOrders.filter((o: any) =>
-        o.address &&
-        (o.latitude === null ||
-          (Math.abs(o.latitude - BANGALORE_DEFAULT.latitude) < 0.0001 &&
-           Math.abs(o.longitude - BANGALORE_DEFAULT.longitude) < 0.0001))
-      );
+      if (!allOrders) return;
 
       let fixed = 0;
-      for (const order of toFix) {
-        const result = await geocodeAddress(order.address);
-        if (result.latitude !== BANGALORE_DEFAULT.latitude || result.longitude !== BANGALORE_DEFAULT.longitude) {
+      for (const order of allOrders) {
+        if (!order.address) continue;
+
+        const newCoords = await geocodeAddress(order.address);
+
+        // Skip if new geocode fell back to city center (couldn't resolve)
+        if (isFallbackCoord(newCoords)) continue;
+
+        const currentLat = order.latitude ?? BANGALORE_DEFAULT.latitude;
+        const currentLon = order.longitude ?? BANGALORE_DEFAULT.longitude;
+
+        // Update if: null, at fallback, or significantly different (> 0.02° ≈ 2km)
+        const needsUpdate =
+          order.latitude === null ||
+          isFallbackCoord({ latitude: currentLat, longitude: currentLon }) ||
+          Math.abs(newCoords.latitude - currentLat) > 0.02 ||
+          Math.abs(newCoords.longitude - currentLon) > 0.02;
+
+        if (needsUpdate) {
           await supabase
             .from("e_waste_requests")
-            .update({ latitude: result.latitude, longitude: result.longitude })
+            .update({ latitude: newCoords.latitude, longitude: newCoords.longitude })
             .eq("id", order.id);
           fixed++;
+          console.log(`Fixed ${order.id}: ${currentLat},${currentLon} → ${newCoords.latitude},${newCoords.longitude}`);
         }
       }
 
       toast({
-        title: fixed > 0 ? `Fixed ${fixed} order(s)` : "No stuck orders found",
-        description: fixed > 0 ? "Refreshing maps..." : "All active orders already have proper coordinates.",
+        title: fixed > 0 ? `Fixed ${fixed} order(s)` : "All coordinates look correct",
+        description: fixed > 0 ? "Refreshing maps..." : "No coordinate updates needed.",
       });
 
       if (fixed > 0) await refreshAll();

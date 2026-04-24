@@ -71,37 +71,46 @@ export const usePickupFormSubmit = () => {
     return null;
   };
 
+  const inBangalore = (r: { latitude: number; longitude: number }) =>
+    r.latitude >= 12.7 && r.latitude <= 13.2 && r.longitude >= 77.3 && r.longitude <= 77.8;
+
   const getLatLongFromAddress = async (address: string): Promise<{ latitude: number; longitude: number }> => {
-    const lower = address.toLowerCase();
-    const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
-    const withCity = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
-
-    // 1. Try full address
-    let result = await nominatimQuery(withCity);
-    if (result) return result;
-
     const parts = address.split(",").map(p => p.trim()).filter(Boolean);
-
-    // 2. Strip leading building number and try rest
-    if (parts.length > 1 && /^[\d/\-\w]+$/.test(parts[0])) {
-      const rest = parts.slice(1).join(", ");
-      const restWithCity = hasCity ? rest : `${rest}, Bangalore, Karnataka, India`;
-      result = await nominatimQuery(restWithCity);
-      if (result) return result;
-    }
-
-    // 3. Try each part individually as a locality — most reliable for Indian sub-addresses
     const skip = new Set(["india", "karnataka", "bangalore", "bengaluru", ""]);
-    for (const part of parts) {
-      if (/\d{6}/.test(part)) continue;           // skip pincode parts
-      if (skip.has(part.toLowerCase())) continue;
-      result = await nominatimQuery(`${part}, Bangalore, Karnataka, India`);
-      if (result && !(result.latitude === BANGALORE_DEFAULT.latitude && result.longitude === BANGALORE_DEFAULT.longitude)) {
+
+    // Sort locality parts longest-first — longer names are more specific landmarks
+    const localityParts = parts
+      .filter(p =>
+        !skip.has(p.toLowerCase()) &&
+        !/\d{6}/.test(p) &&
+        !/^[\d/\-]+$/.test(p)
+      )
+      .sort((a, b) => b.length - a.length);
+
+    // 1. Try each locality individually (longest = most specific first)
+    for (const part of localityParts) {
+      const result = await nominatimQuery(`${part}, Bangalore, Karnataka, India`);
+      if (result &&
+          !(result.latitude === BANGALORE_DEFAULT.latitude && result.longitude === BANGALORE_DEFAULT.longitude) &&
+          inBangalore(result)) {
         return result;
       }
     }
 
-    // 4. Last resort: Bangalore city center
+    // 2. Try pincode
+    const pincodeMatch = address.match(/\b(\d{6})\b/);
+    if (pincodeMatch) {
+      const result = await nominatimQuery(`${pincodeMatch[1]}, Karnataka, India`);
+      if (result && inBangalore(result)) return result;
+    }
+
+    // 3. Try full address as last resort
+    const lower = address.toLowerCase();
+    const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
+    const withCity = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
+    const result = await nominatimQuery(withCity);
+    if (result && inBangalore(result)) return result;
+
     console.warn("Geocoding fell back to Bangalore center for:", address);
     return BANGALORE_DEFAULT;
   };
