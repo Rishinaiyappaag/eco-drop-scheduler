@@ -9,7 +9,8 @@ import {
   Gift,
   Users,
   Map,
-  FileDown
+  FileDown,
+  MapPin
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +59,88 @@ const Admin = () => {
   const [strategyText, setStrategyText] = useState("");
   const [isStrategyLoading, setIsStrategyLoading] = useState(false);
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [isFixingCoords, setIsFixingCoords] = useState(false);
+
+  const BANGALORE_DEFAULT = { latitude: 12.9716, longitude: 77.5946 };
+
+  const nominatimQuery = async (query: string) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;
+      const res = await fetch(url, { headers: { "Accept-Language": "en" } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data && data.length > 0) return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+    } catch { }
+    return null;
+  };
+
+  const geocodeAddress = async (address: string) => {
+    const lower = address.toLowerCase();
+    const hasCity = lower.includes("bangalore") || lower.includes("bengaluru") || lower.includes("karnataka");
+    const withCity = hasCity ? address : `${address}, Bangalore, Karnataka, India`;
+
+    let result = await nominatimQuery(withCity);
+    if (result) return result;
+
+    const parts = address.split(",").map((p: string) => p.trim()).filter(Boolean);
+    if (parts.length > 1 && /^[\d/\-\w]+$/.test(parts[0])) {
+      const rest = parts.slice(1).join(", ");
+      result = await nominatimQuery(hasCity ? rest : `${rest}, Bangalore, Karnataka, India`);
+      if (result) return result;
+    }
+
+    const skip = new Set(["india", "karnataka", "bangalore", "bengaluru", ""]);
+    for (const part of parts) {
+      if (/\d{6}/.test(part)) continue;
+      if (skip.has(part.toLowerCase())) continue;
+      result = await nominatimQuery(`${part}, Bangalore, Karnataka, India`);
+      if (result && !(result.latitude === BANGALORE_DEFAULT.latitude && result.longitude === BANGALORE_DEFAULT.longitude)) return result;
+    }
+
+    return BANGALORE_DEFAULT;
+  };
+
+  const fixFallbackCoords = async () => {
+    setIsFixingCoords(true);
+    try {
+      const { data: stuckOrders } = await supabase
+        .from("e_waste_requests")
+        .select("id, address, latitude, longitude")
+        .in("status", ["pending", "accepted"]);
+
+      if (!stuckOrders) return;
+
+      const toFix = stuckOrders.filter((o: any) =>
+        o.address &&
+        (o.latitude === null ||
+          (Math.abs(o.latitude - BANGALORE_DEFAULT.latitude) < 0.0001 &&
+           Math.abs(o.longitude - BANGALORE_DEFAULT.longitude) < 0.0001))
+      );
+
+      let fixed = 0;
+      for (const order of toFix) {
+        const result = await geocodeAddress(order.address);
+        if (result.latitude !== BANGALORE_DEFAULT.latitude || result.longitude !== BANGALORE_DEFAULT.longitude) {
+          await supabase
+            .from("e_waste_requests")
+            .update({ latitude: result.latitude, longitude: result.longitude })
+            .eq("id", order.id);
+          fixed++;
+        }
+      }
+
+      toast({
+        title: fixed > 0 ? `Fixed ${fixed} order(s)` : "No stuck orders found",
+        description: fixed > 0 ? "Refreshing maps..." : "All active orders already have proper coordinates.",
+      });
+
+      if (fixed > 0) await refreshAll();
+    } catch (e) {
+      console.error("fixFallbackCoords error:", e);
+    } finally {
+      setIsFixingCoords(false);
+    }
+  };
 
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://127.0.0.1:8000";
 
@@ -308,6 +391,16 @@ const Admin = () => {
             >
               <RefreshCw className={`mr-2 h-5 w-5 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
+            </Button>
+
+            <Button
+              onClick={fixFallbackCoords}
+              variant="outline"
+              disabled={isFixingCoords}
+              title="Re-geocode orders stuck at Bangalore city center"
+            >
+              <MapPin className={`mr-2 h-5 w-5 ${isFixingCoords ? "animate-pulse" : ""}`} />
+              {isFixingCoords ? "Fixing..." : "Fix Coords"}
             </Button>
           </div>
 
