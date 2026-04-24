@@ -315,43 +315,59 @@ def geocode_nominatim(full_address: str):
     return None
 
 def resolve_address(address: str):
-    """Try multiple geocoding strategies, progressively simplifying the address."""
-    lower = address.lower()
-    has_city = any(x in lower for x in ["bangalore", "bengaluru", "karnataka"])
-    with_city = address if has_city else f"{address}, Bangalore, Karnataka, India"
+    """Progressive geocoding — tries increasingly simplified address forms."""
+    import re
+
+    has_city = any(x in address.lower() for x in ["bangalore", "bengaluru", "karnataka"])
+
+    def try_geocode(query: str):
+        full = query if has_city else f"{query}, Bangalore, Karnataka, India"
+        return geocode_opencage(full) or geocode_nominatim(full)
 
     # 1. Full address
-    result = geocode_opencage(with_city) or geocode_nominatim(with_city)
+    result = try_geocode(address)
     if result:
         return result["latitude"], result["longitude"]
 
-    # 2. Strip leading building/flat number
-    import re
-    stripped = re.sub(r'^[\w/\-]+,\s*', '', address)
-    if stripped != address:
-        stripped_query = stripped if has_city else f"{stripped}, Bangalore, Karnataka, India"
-        result = geocode_opencage(stripped_query) or geocode_nominatim(stripped_query)
-        if result:
-            return result["latitude"], result["longitude"]
-
-    # 3. Use only the area/locality parts (drop building number + pincode)
     parts = [p.strip() for p in address.split(",") if p.strip()]
-    area_parts = [p for p in parts[1:] if not re.match(r'^\d{6}$', p.strip())]
-    if area_parts:
-        area_query = ", ".join(area_parts) + ", Bangalore, Karnataka, India"
-        result = geocode_opencage(area_query) or geocode_nominatim(area_query)
+
+    # 2. Strip leading building number and try rest
+    if parts and re.match(r'^[\d/\-\w]+$', parts[0]):
+        result = try_geocode(", ".join(parts[1:]))
         if result:
             return result["latitude"], result["longitude"]
 
-    # Last resort: Bangalore city center
-    return 12.9716, 77.5946
+    # 3. Try each part individually as a locality (most reliable for Indian addresses)
+    skip = {"india", "karnataka", "bangalore", "bengaluru", ""}
+    for part in parts:
+        if re.search(r'\d{6}', part):  # skip pincode parts
+            continue
+        if part.lower() in skip:
+            continue
+        locality_query = f"{part}, Bangalore, Karnataka, India"
+        result = geocode_nominatim(locality_query)
+        if result and (result["latitude"] != FALLBACK_LAT or result["longitude"] != FALLBACK_LON):
+            return result["latitude"], result["longitude"]
+
+    # 4. Try pincode alone
+    pincode = re.search(r'\b(\d{6})\b', address)
+    if pincode:
+        result = geocode_nominatim(f"{pincode.group(1)}, Karnataka, India")
+        if result:
+            return result["latitude"], result["longitude"]
+
+    return FALLBACK_LAT, FALLBACK_LON
+
+FALLBACK_LAT = 12.9716
+FALLBACK_LON = 77.5946
 
 def backfill_null_coordinates():
-    """Geocode any pending/accepted orders that have null coordinates."""
+    """Geocode pending/accepted orders that have null OR fallback (city center) coordinates."""
     try:
+        # Fetch all pending/accepted orders with address
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/e_waste_requests"
-            f"?status=in.(pending,accepted)&latitude=is.null&select=id,address",
+            f"?status=in.(pending,accepted)&select=id,address,latitude,longitude",
             headers=HEADERS,
         )
         if response.status_code != 200:
@@ -360,13 +376,20 @@ def backfill_null_coordinates():
         for order in orders:
             if not order.get("address"):
                 continue
-            lat, lon = resolve_address(order["address"])
-            requests.patch(
-                f"{SUPABASE_URL}/rest/v1/e_waste_requests?id=eq.{order['id']}",
-                headers=HEADERS,
-                json={"latitude": lat, "longitude": lon},
-            )
-            print(f"Backfilled coords for order {order['id']}: {lat}, {lon}")
+            lat = order.get("latitude")
+            lon = order.get("longitude")
+            # Re-geocode if null OR stuck at the Bangalore center fallback
+            is_fallback = (lat == FALLBACK_LAT and lon == FALLBACK_LON)
+            if lat is None or is_fallback:
+                new_lat, new_lon = resolve_address(order["address"])
+                # Only update if we got a better result than the fallback
+                if new_lat != FALLBACK_LAT or new_lon != FALLBACK_LON or lat is None:
+                    requests.patch(
+                        f"{SUPABASE_URL}/rest/v1/e_waste_requests?id=eq.{order['id']}",
+                        headers=HEADERS,
+                        json={"latitude": new_lat, "longitude": new_lon},
+                    )
+                    print(f"Updated coords for {order['id']}: {new_lat}, {new_lon}")
     except Exception as e:
         print(f"Backfill error: {e}")
 
@@ -374,6 +397,28 @@ def backfill_null_coordinates():
 def fix_null_coords():
     backfill_null_coordinates()
     return {"status": "done"}
+
+@app.get("/fix-order/{order_id}")
+def fix_order(order_id: str):
+    """Force re-geocode a specific order by ID regardless of current coordinates."""
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/e_waste_requests?id=eq.{order_id}&select=id,address",
+            headers=HEADERS,
+        )
+        orders = resp.json()
+        if not orders:
+            return {"error": "Order not found"}
+        address = orders[0].get("address", "")
+        lat, lon = resolve_address(address)
+        requests.patch(
+            f"{SUPABASE_URL}/rest/v1/e_waste_requests?id=eq.{order_id}",
+            headers=HEADERS,
+            json={"latitude": lat, "longitude": lon},
+        )
+        return {"order_id": order_id, "address": address, "latitude": lat, "longitude": lon}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/geocode")
 def geocode(address: str):

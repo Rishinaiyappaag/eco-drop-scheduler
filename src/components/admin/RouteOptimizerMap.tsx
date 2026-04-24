@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -17,6 +18,16 @@ interface Props {
   locations: [number, number][];
 }
 
+function FitBounds({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length > 0) {
+      map.fitBounds(L.latLngBounds(positions), { padding: [50, 50] });
+    }
+  }, [positions]);
+  return null;
+}
+
 const RouteOptimizerMap = ({ locations }: Props) => {
   if (!locations || locations.length === 0) {
     return (
@@ -30,11 +41,13 @@ const RouteOptimizerMap = ({ locations }: Props) => {
 
   return (
     <div className="h-96 w-full rounded-lg overflow-hidden shadow">
-      <MapContainer center={center} zoom={12} style={{ height: "100%", width: "100%" }}>
+      <MapContainer center={center} zoom={11} style={{ height: "100%", width: "100%" }}>
         <TileLayer
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        <FitBounds positions={locations} />
 
         {/* Optimized route line */}
         <Polyline positions={locations} color="#2563eb" weight={3} dashArray="6 4" />

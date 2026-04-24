@@ -80,24 +80,24 @@ export const usePickupFormSubmit = () => {
     let result = await nominatimQuery(withCity);
     if (result) return result;
 
-    // 2. Strip leading building/flat number (e.g. "133/2B, BSM Extension..." → "BSM Extension...")
-    const stripped = address.replace(/^[\d/\-A-Za-z]+,\s*/, "");
-    if (stripped !== address) {
-      const strippedWithCity = hasCity ? stripped : `${stripped}, Bangalore, Karnataka, India`;
-      result = await nominatimQuery(strippedWithCity);
+    const parts = address.split(",").map(p => p.trim()).filter(Boolean);
+
+    // 2. Strip leading building number and try rest
+    if (parts.length > 1 && /^[\d/\-\w]+$/.test(parts[0])) {
+      const rest = parts.slice(1).join(", ");
+      const restWithCity = hasCity ? rest : `${rest}, Bangalore, Karnataka, India`;
+      result = await nominatimQuery(restWithCity);
       if (result) return result;
     }
 
-    // 3. Extract just locality/area: take last 2–3 comma-separated parts before the pincode
-    const parts = address.split(",").map(p => p.trim()).filter(Boolean);
-    if (parts.length >= 2) {
-      // Drop the first part (building) and last part if it's a pincode
-      const isPincode = (s: string) => /^\d{6}$/.test(s.trim());
-      const areaParts = parts.slice(1).filter(p => !isPincode(p));
-      if (areaParts.length > 0) {
-        const areaQuery = `${areaParts.join(", ")}, Bangalore, Karnataka, India`;
-        result = await nominatimQuery(areaQuery);
-        if (result) return result;
+    // 3. Try each part individually as a locality — most reliable for Indian sub-addresses
+    const skip = new Set(["india", "karnataka", "bangalore", "bengaluru", ""]);
+    for (const part of parts) {
+      if (/\d{6}/.test(part)) continue;           // skip pincode parts
+      if (skip.has(part.toLowerCase())) continue;
+      result = await nominatimQuery(`${part}, Bangalore, Karnataka, India`);
+      if (result && !(result.latitude === BANGALORE_DEFAULT.latitude && result.longitude === BANGALORE_DEFAULT.longitude)) {
+        return result;
       }
     }
 

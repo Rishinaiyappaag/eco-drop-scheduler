@@ -1,4 +1,6 @@
-import { MapContainer, TileLayer, Circle, CircleMarker, Popup } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Circle, CircleMarker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 interface Props {
@@ -10,8 +12,19 @@ interface Props {
 const CLUSTER_COLORS = ["#ef4444", "#3b82f6", "#22c55e"];
 const DEFAULT_CENTER: [number, number] = [12.9716, 77.5946];
 
+function FitBounds({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length > 0) {
+      map.fitBounds(L.latLngBounds(positions), { padding: [50, 50] });
+    }
+  }, [positions]);
+  return null;
+}
+
 const HotspotMap = ({ clusters, points = [], labels = [] }: Props) => {
   const center = clusters && clusters.length > 0 ? clusters[0] : DEFAULT_CENTER;
+  const allPositions = [...clusters, ...points].filter(Boolean);
 
   return (
     <div className="h-96 w-full rounded-lg overflow-hidden shadow">
@@ -20,6 +33,8 @@ const HotspotMap = ({ clusters, points = [], labels = [] }: Props) => {
           attribution="&copy; OpenStreetMap contributors"
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
+        {allPositions.length > 0 && <FitBounds positions={allPositions} />}
 
         {/* Cluster zone circles */}
         {clusters.map((c, i) => (
